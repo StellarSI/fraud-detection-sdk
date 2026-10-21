@@ -1,0 +1,17 @@
+{
+  "id": "GTRUSTLINEACCOUNTAAAAABBBBCCCCCDDDDDEEEEFFFFGGGGHHHHIIIIJJ",
+  "sequence": "10",
+  "subentry_count": 12,
+  "thresholds": { "low_threshold": 0, "med_threshold": 0, "high_threshold": 0 },
+  "balances": [
+    { "asset_type": "native", "balance": "10.0000000", "limb": null },
+    { "asset_type": "credit_alphanum4", "asset_code": "USDC", "asset_issuer": "GA5Z", "balance": "100.0000000", "limb": null },
+    { "asset_type": "credit_alphanum4", "asset_code": "EURC", "asset_issuer": "GA5Z", "balance": "200.0000000", "limb": null },
+    { "asset_type": "credit_alphanum12", "asset_code": "TOKENA", "asset_issuer": "GB7Z", "balance": "1.0000000", "limb": null },
+    { "asset_type": "credit_alphanum12", "asset_code": "TOKENB", "asset_issuer": "GB7Z", "balance": "0.0000000", "limb": null },
+    { "asset_type": "credit_alphanum4", "asset_code": "USDT", "asset_issuer": "GUDT", "balance": "50.0000000", "limb": null }
+  ],
+  "signers": [{ "weight": 1, "key": "GTRUSTLINEACCOUNTAAAAABBBBCCCCCDDDDDEEEEFFFFGGGGHHHHIIIIJJ", "type": "ed25519" }],
+  "data": {},
+  "paging_token": "20"
+}
