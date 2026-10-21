@@ -1,0 +1,12 @@
+{
+  "_embedded": {
+    "records": [
+      { "id": "100", "created_at": "2024-01-01T00:00:01Z", "source_account": "GAAA", "type": "payment", "amount": "5.0000000", "asset_code": "", "to": "GBBB", "memo": "invoice-1234", "memo_type": "text" },
+      { "id": "101", "created_at": "2024-01-01T00:00:02Z", "source_account": "GAAA", "type": "payment", "amount": "2.0000000", "asset_code": "", "to": "GBBB", "memo": "12345", "memo_type": "id" },
+      { "id": "102", "created_at": "2024-01-01T00:00:03Z", "source_account": "GAAA", "type": "payment", "amount": "9.0000000", "asset_code": "USDC", "to": "GBBB", "memo": "9f86d081884c7d659a2feaa0c55ad015", "memo_type": "hash" },
+      { "id": "103", "created_at": "2024-01-01T00:00:04Z", "source_account": "GAAA", "type": "create_account", "amount": "0.5000000", "asset_code": "", "to": "GBBB", "memo_type": "none" },
+      { "id": "104", "created_at": "2024-01-01T00:00:05Z", "source_account": "GAAA", "type": "payment", "amount": "3.0000000", "asset_code": "", "from": "GBBB", "memo": "refund-9", "memo_type": "return" }
+    ]
+  },
+  "_links": {}
+}

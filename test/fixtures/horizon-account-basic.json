@@ -1,0 +1,13 @@
+{
+  "id": "GABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJKLMNOPQRSTUVWXYZABCDEF",
+  "sequence": "42",
+  "subentry_count": 3,
+  "thresholds": { "low_threshold": 0, "med_threshold": 0, "high_threshold": 0 },
+  "balances": [
+    { "asset_type": "native", "balance": "100.0000000", "limb": null },
+    { "asset_type": "credit_alphanum4", "asset_code": "USDC", "asset_issuer": "GA5Z", "balance": "500.0000000", "limb": null }
+  ],
+  "signers": [{ "weight": 1, "key": "GABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJKLMNOPQRSTUVWXYZABCDEF", "type": "ed25519" }],
+  "data": {},
+  "paging_token": "100"
+}
