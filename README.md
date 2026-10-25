@@ -115,7 +115,7 @@ Horizon / transaction-analytics-api
 
 ## Contributing
 
-Issues and PRs are welcome. For security-sensitive reports, please contact the maintainers privately rather than opening a public issue. See `CONTRIBUTING.md` and `SECURITY.md`.
+Issues and PRs are welcome. For security-sensitive reports, please contact the maintainers privately rather than opening a public issue. See [CONTRIBUTING.md](CONTRIBUTING.md) and [SECURITY.md](SECURITY.md).
 
 ## Related projects
 
