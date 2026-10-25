@@ -6,6 +6,7 @@
  */
 
 import { NetworkPreset, NETWORK_PRESETS, SUPPORTED_NETWORKS } from "./network.js";
+import { ThresholdConfig, DEFAULT_THRESHOLDS, validateThresholds } from "./scoring/levels.js";
 
 /**
  * Error thrown when FraudDetector configuration is invalid.
@@ -44,6 +45,17 @@ export interface FraudDetectorOptions {
    * Useful for tests and custom retry/auth logic.
    */
   horizonClient?: HorizonClientLike;
+  /**
+   * Optional risk classification thresholds.
+   * If omitted, defaults from README.md:74-78 are used (low=0.40, high=0.70).
+   * Must satisfy 0 <= low < high <= 1.
+   */
+  thresholds?: {
+    /** Score below this is classified as "low". Default: 0.40 */
+    low: number;
+    /** Score above this is classified as "high". Default: 0.70 */
+    high: number;
+  };
 }
 
 /**
@@ -88,6 +100,43 @@ export function resolveConfig(options: Partial<FraudDetectorOptions>): FraudDete
     );
   }
 
+  // Validate thresholds if provided
+  let thresholds: { low: number; high: number } | undefined;
+  if (options.thresholds !== undefined) {
+    const { low, high } = options.thresholds;
+    if (typeof low !== "number" || typeof high !== "number") {
+      throw new ConfigError(
+        "Thresholds must be numbers",
+        "INVALID_CONFIG"
+      );
+    }
+    if (!Number.isFinite(low) || !Number.isFinite(high)) {
+      throw new ConfigError(
+        "Thresholds must be finite numbers",
+        "INVALID_CONFIG"
+      );
+    }
+    if (low < 0 || low > 1) {
+      throw new ConfigError(
+        `Low threshold must be in [0, 1], got ${low}`,
+        "INVALID_CONFIG"
+      );
+    }
+    if (high < 0 || high > 1) {
+      throw new ConfigError(
+        `High threshold must be in [0, 1], got ${high}`,
+        "INVALID_CONFIG"
+      );
+    }
+    if (low >= high) {
+      throw new ConfigError(
+        `Low threshold (${low}) must be strictly less than high threshold (${high})`,
+        "INVALID_CONFIG"
+      );
+    }
+    thresholds = { low, high };
+  }
+
   // Resolve horizonUrl from preset if not provided
   let horizonUrl = options.horizonUrl;
   if (!horizonUrl) {
@@ -114,6 +163,7 @@ export function resolveConfig(options: Partial<FraudDetectorOptions>): FraudDete
     network,
     horizonUrl,
     horizonClient: options.horizonClient,
+    thresholds,
   };
 }
 

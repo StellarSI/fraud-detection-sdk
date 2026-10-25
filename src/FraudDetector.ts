@@ -8,6 +8,7 @@
 import { FraudDetectorOptions, HorizonClientLike, resolveConfig } from "./config.js";
 import { ScoreResult, Signal, RiskLevel } from "./types.js";
 import { normalizeScore } from "./scoring/normalize.js";
+import { classifyLevel, DEFAULT_THRESHOLDS } from "./scoring/levels.js";
 
 /**
  * Horizon API response types.
@@ -223,6 +224,7 @@ export class DetectorConfigError extends FraudDetectorError {
 export class FraudDetector {
   private readonly options: FraudDetectorOptions;
   private readonly horizon: HorizonClient;
+  private readonly thresholds: { low: number; high: number };
 
   /**
    * Creates a new FraudDetector instance.
@@ -235,6 +237,7 @@ export class FraudDetector {
     this.horizon = this.options.horizonClient
       ? (this.options.horizonClient as HorizonClient)
       : new DefaultHorizonClient(this.options.horizonUrl ?? "");
+    this.thresholds = this.options.thresholds ?? DEFAULT_THRESHOLDS;
   }
 
   /**
@@ -268,7 +271,7 @@ export class FraudDetector {
 
       // Aggregate and normalize
       const { score, signals } = this.aggregateSignals(rawSignals);
-      const level = this.scoreToLevel(score);
+      const level = classifyLevel(score, this.thresholds);
 
       return {
         score,
@@ -307,6 +310,7 @@ export class FraudDetector {
     return {
       network: this.options.network,
       horizonUrl: this.options.horizonUrl,
+      thresholds: this.thresholds,
     };
   }
 
@@ -439,15 +443,6 @@ export class FraudDetector {
     }));
 
     return { score: normalizedScore, signals };
-  }
-
-  /**
-   * Converts a 0–1 score to a risk level.
-   */
-  private scoreToLevel(score: number): RiskLevel {
-    if (score >= 0.7) return "high";
-    if (score >= 0.4) return "medium";
-    return "low";
   }
 
   /**
