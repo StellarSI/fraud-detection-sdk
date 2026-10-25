@@ -9,4 +9,5 @@ export { FraudDetectorError, ValidationError, HorizonError, DetectorConfigError 
 export { FraudDetectorOptions, ConfigError as ConfigErrorClass, resolveConfig, isConfigError, SUPPORTED_NETWORKS } from "./config.js";
 export { NetworkPreset, NETWORK_PRESETS, getNetworkPreset, isSupportedNetwork } from "./network.js";
 export { normalizeScore, normalizeScoreWithRange, clipToUnitInterval, roundToPrecision, DEFAULT_SCORE_PRECISION } from "./scoring/normalize.js";
+export { classifyLevel, classify, getSuggestedAction, validateThresholds, DEFAULT_THRESHOLDS } from "./scoring/levels.js";
 export { ScoreResult, Signal, RiskLevel, AccountRisk } from "./types.js";

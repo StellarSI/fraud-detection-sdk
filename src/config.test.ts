@@ -39,6 +39,19 @@ describe("resolveConfig", () => {
     expect(cfg.horizonUrl).toBe("https://horizon-testnet.stellar.org");
   });
 
+  it("accepts valid thresholds option", () => {
+    const cfg = resolveConfig({
+      network: "testnet",
+      thresholds: { low: 0.3, high: 0.8 },
+    });
+    expect(cfg.thresholds).toEqual({ low: 0.3, high: 0.8 });
+  });
+
+  it("uses default thresholds when none provided", () => {
+    const cfg = resolveConfig({ network: "testnet" });
+    expect(cfg.thresholds).toBeUndefined();
+  });
+
   it("throws ConfigError for missing network", () => {
     expect(() => resolveConfig({})).toThrow(ConfigError);
     expect(() => resolveConfig({})).toThrow("Network is required");
@@ -105,6 +118,57 @@ describe("resolveConfig", () => {
     } catch (e) {
       expect(isConfigError(e)).toBe(true);
       expect((e as ConfigError).code).toBe("INVALID_HORIZON_URL");
+    }
+  });
+
+  it("throws ConfigError for invalid thresholds (low not a number)", () => {
+    expect(() =>
+      resolveConfig({ network: "testnet", thresholds: { low: "0.3" as any, high: 0.8 } })
+    ).toThrow(ConfigError);
+  });
+
+  it("throws ConfigError for invalid thresholds (high not a number)", () => {
+    expect(() =>
+      resolveConfig({ network: "testnet", thresholds: { low: 0.3, high: "0.8" as any } })
+    ).toThrow(ConfigError);
+  });
+
+  it("throws ConfigError for invalid thresholds (low < 0)", () => {
+    expect(() =>
+      resolveConfig({ network: "testnet", thresholds: { low: -0.1, high: 0.8 } })
+    ).toThrow(ConfigError);
+  });
+
+  it("throws ConfigError for invalid thresholds (high > 1)", () => {
+    expect(() =>
+      resolveConfig({ network: "testnet", thresholds: { low: 0.3, high: 1.1 } })
+    ).toThrow(ConfigError);
+  });
+
+  it("throws ConfigError for invalid thresholds (low >= high)", () => {
+    expect(() =>
+      resolveConfig({ network: "testnet", thresholds: { low: 0.7, high: 0.7 } })
+    ).toThrow(ConfigError);
+    expect(() =>
+      resolveConfig({ network: "testnet", thresholds: { low: 0.8, high: 0.7 } })
+    ).toThrow(ConfigError);
+  });
+
+  it("throws ConfigError for non-finite thresholds", () => {
+    expect(() =>
+      resolveConfig({ network: "testnet", thresholds: { low: NaN, high: 0.8 } })
+    ).toThrow(ConfigError);
+    expect(() =>
+      resolveConfig({ network: "testnet", thresholds: { low: 0.3, high: Infinity } })
+    ).toThrow(ConfigError);
+  });
+
+  it("returns ConfigError with correct code for invalid thresholds", () => {
+    try {
+      resolveConfig({ network: "testnet", thresholds: { low: 0.7, high: 0.7 } });
+    } catch (e) {
+      expect(isConfigError(e)).toBe(true);
+      expect((e as ConfigError).code).toBe("INVALID_CONFIG");
     }
   });
 });

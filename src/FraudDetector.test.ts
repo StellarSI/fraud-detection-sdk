@@ -257,6 +257,58 @@ describe("FraudDetector.scoreAccount", () => {
       expect(result.level).toBe("low");
     }
   });
+
+  it("uses custom thresholds from config", async () => {
+    const mockClient = createMockHorizonClient({
+      transactions: Array(100).fill(0).map((_, i) => ({
+        id: `tx${i}`,
+        created_at: "2024-01-15T10:00:00Z",
+        source_account: "GABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJKLMNOPQRSTUVWXYZABCDEF",
+        type: "payment",
+        amount: "10.0000000",
+        asset_code: "USDC",
+        to: `GOTHER${i.toString().padStart(50, "0")}`,
+      })),
+    });
+
+    // With custom thresholds: low=0.3, high=0.8
+    const detector = new FraudDetector({
+      network: "testnet",
+      horizonClient: mockClient,
+      thresholds: { low: 0.3, high: 0.8 },
+    });
+    const result = await detector.scoreAccount("GABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJKLMNOPQRSTUVWXYZABCDEF");
+
+    // With custom thresholds, the level should be classified differently
+    if (result.score < 0.3) {
+      expect(result.level).toBe("low");
+    } else if (result.score > 0.8) {
+      expect(result.level).toBe("high");
+    } else {
+      expect(result.level).toBe("medium");
+    }
+  });
+
+  it("getConfig returns thresholds", () => {
+    const detector = new FraudDetector({
+      network: "testnet",
+      horizonClient: createMockHorizonClient(),
+      thresholds: { low: 0.2, high: 0.9 },
+    });
+
+    const config = detector.getConfig();
+    expect(config.thresholds).toEqual({ low: 0.2, high: 0.9 });
+  });
+
+  it("getConfig returns default thresholds when none provided", () => {
+    const detector = new FraudDetector({
+      network: "testnet",
+      horizonClient: createMockHorizonClient(),
+    });
+
+    const config = detector.getConfig();
+    expect(config.thresholds).toEqual({ low: 0.4, high: 0.7 });
+  });
 });
 
 describe("DefaultHorizonClient", () => {
