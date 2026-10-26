@@ -126,7 +126,7 @@ describe("DefaultHorizonClient maps failures to the taxonomy", () => {
       ok: status >= 200 && status < 300,
       status,
       statusText: `status-${status}`,
-      headers,
+      headers: { get: (name: string) => headers[name.toLowerCase()] ?? null },
       json: () => Promise.resolve({}),
     });
     vi.stubGlobal("fetch", fetchMock);
