@@ -6,9 +6,9 @@
  */
 
 import { FraudDetectorOptions, HorizonClientLike, resolveConfig } from "./config.js";
-import { ScoreResult, Signal, RiskLevel } from "./types.js";
-import { normalizeScore } from "./scoring/normalize.js";
-import { classifyLevel, DEFAULT_THRESHOLDS } from "./scoring/levels.js";
+import { ScoreResult } from "./types.js";
+import { DEFAULT_THRESHOLDS } from "./scoring/levels.js";
+import { aggregate } from "./scoring/aggregate.js";
 import {
   ConfigError as TaxonomyConfigError,
   FraudDetectorError,
@@ -320,12 +320,21 @@ export class FraudDetector {
       // Extract features
       const features = this.extractFeatures(account, transactions);
 
-      // Run detectors (rules + statistical + ML)
+      // Run detectors (rules + statistical + ML); each declares its own
+      // uniform signal weight (issue #8).
       const rawSignals = await this.runDetectors(features);
 
-      // Aggregate and normalize
-      const { score, signals } = this.aggregateSignals(rawSignals);
-      const level = classifyLevel(score, this.thresholds);
+      // Combine the weighted detector outputs with the shared scoring
+      // engine: sum, clip to [0, 1], classify the level, and emit the
+      // deterministic ordered explanation.
+      const contributions = rawSignals.map((signal) => ({
+        id: signal.id,
+        weight: signal.rawWeight,
+        detail: signal.detail,
+      }));
+      const { score, level, signals } = aggregate(contributions, {
+        thresholds: this.thresholds,
+      });
 
       return {
         score,
@@ -389,19 +398,43 @@ export class FraudDetector {
 
   /**
    * Extracts features from account and transaction data.
-   * This is where velocity, graph, asset, and memo features are computed.
+   *
+   * Feature extraction is still a placeholder for the richer velocity /
+   * graph / asset detectors (issues #5+), but the social-graph features
+   * that detectors already consume (unique counterparties, fan-out
+   * ratio, asset diversity, trustlines) are computed for real so the
+   * aggregation engine receives meaningful declared weights.
    */
   private extractFeatures(account: unknown, transactions: unknown[]): FeatureVector {
-    // Placeholder for feature extraction logic
-    // Real implementation will compute velocity, graph, asset, memo features
+    const txs = Array.isArray(transactions) ? transactions : [];
+
+    const counterparties = new Set<string>();
+    const outgoing = new Set<string>();
+    for (const tx of txs) {
+      const t = tx as { to?: unknown; from?: unknown } | null | undefined;
+      if (t && typeof t.to === "string" && t.to) {
+        outgoing.add(t.to);
+        counterparties.add(t.to);
+      }
+      if (t && typeof t.from === "string" && t.from) {
+        counterparties.add(t.from);
+      }
+    }
+
+    const acct = account as { balances?: Array<{ asset_code?: string; asset_type?: string }> } | null;
+    const assetSet = new Set<string>();
+    for (const balance of acct?.balances ?? []) {
+      assetSet.add(balance.asset_code ?? balance.asset_type ?? "native");
+    }
+
     return {
       accountAge: 0,
-      transactionCount: transactions.length,
-      uniqueCounterparties: 0,
-      assetDiversity: 0,
+      transactionCount: txs.length,
+      uniqueCounterparties: counterparties.size,
+      assetDiversity: assetSet.size,
       velocityScore: 0,
-      fanOutRatio: 0,
-      trustlineCount: 0,
+      fanOutRatio: txs.length > 0 ? outgoing.size / txs.length : 0,
+      trustlineCount: acct?.balances?.length ?? 0,
     };
   }
 
@@ -475,30 +508,6 @@ export class FraudDetector {
     }
 
     return signals;
-  }
-
-  /**
-   * Aggregates raw signals into a final score and normalized signal list.
-   */
-  private aggregateSignals(rawSignals: RawSignal[]): { score: number; signals: Signal[] } {
-    if (rawSignals.length === 0) {
-      return { score: 0, signals: [] };
-    }
-
-    // Sum raw weights (preserves ratios)
-    const totalWeight = rawSignals.reduce((sum, s) => sum + s.rawWeight, 0);
-
-    // Normalize to [0, 1]
-    const normalizedScore = normalizeScore(totalWeight);
-
-    // Convert to output signals with normalized weights
-    const signals: Signal[] = rawSignals.map((s) => ({
-      id: s.id,
-      weight: normalizeScore(s.rawWeight / (totalWeight || 1)),
-      detail: s.detail,
-    }));
-
-    return { score: normalizedScore, signals };
   }
 
   /**
