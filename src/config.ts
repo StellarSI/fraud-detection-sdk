@@ -7,19 +7,35 @@
 
 import { NetworkPreset, NETWORK_PRESETS, SUPPORTED_NETWORKS } from "./network.js";
 import { ThresholdConfig, DEFAULT_THRESHOLDS, validateThresholds } from "./scoring/levels.js";
+import { ConfigError as TaxonomyConfigError } from "./errors.js";
+
+/**
+ * Machine-readable reason codes for configuration failures.
+ * Also exposed as `ConfigError.code` (refining the generic taxonomy code).
+ */
+export type ConfigErrorCode =
+  | "INVALID_NETWORK"
+  | "MISSING_REQUIRED"
+  | "INVALID_HORIZON_URL"
+  | "INVALID_CONFIG";
 
 /**
  * Error thrown when FraudDetector configuration is invalid.
  *
- * Extends Error with a `code` property for programmatic handling.
+ * Extends the shared SDK taxonomy (see src/errors.ts): it is a
+ * `FraudDetectorError` with the taxonomy code "CONFIG_ERROR", refined
+ * here by a `reason` plus a precise `.code` (INVALID_NETWORK,
+ * MISSING_REQUIRED, ...) for programmatic handling.
  */
-export class ConfigError extends Error {
-  public readonly code: "INVALID_NETWORK" | "MISSING_REQUIRED" | "INVALID_HORIZON_URL" | "INVALID_CONFIG";
+export class ConfigError extends TaxonomyConfigError {
+  /** Detailed reason for the configuration failure. */
+  readonly reason: ConfigErrorCode;
 
-  constructor(message: string, code: ConfigError["code"]) {
+  constructor(message: string, code: ConfigErrorCode) {
     super(message);
     this.name = "ConfigError";
     this.code = code;
+    this.reason = code;
   }
 }
 
