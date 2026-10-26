@@ -12,6 +12,10 @@ import { classifyLevel, DEFAULT_THRESHOLDS } from "./scoring/levels.js";
 import {
   ConfigError as TaxonomyConfigError,
   FraudDetectorError,
+  NetworkError,
+  NotFoundError,
+  RateLimitError,
+  UpstreamError,
   ValidationError,
 } from "./errors.js";
 
@@ -91,14 +95,66 @@ export class DefaultHorizonClient implements HorizonClient {
     this.baseUrl = horizonUrl.replace(/\/+$/, "");
   }
 
-  async getAccount(accountId: string) {
-    const response = await fetch(`${this.baseUrl}/accounts/${accountId}`);
-    if (!response.ok) {
-      if (response.status === 404) {
-        throw new Error(`Account not found: ${accountId}`);
-      }
-      throw new Error(`Horizon error: ${response.status} ${response.statusText}`);
+  /**
+   * Performs a GET against Horizon, translating transport and HTTP
+   * failures into the shared SDK taxonomy (issue #9).
+   */
+  private async request(url: string): Promise<Response> {
+    let response: Response;
+    try {
+      response = await fetch(url);
+    } catch (error) {
+      throw new NetworkError(
+        "Could not reach Horizon. Check your internet connection and the configured Horizon URL, then try again.",
+        { cause: error }
+      );
     }
+    if (!response.ok) {
+      throw this.toTaxonomyError(response);
+    }
+    return response;
+  }
+
+  /** Maps a failed Horizon HTTP response to a taxonomy error. */
+  private toTaxonomyError(response: Response): FraudDetectorError {
+    const status = response.status;
+
+    if (status === 404) {
+      return new NotFoundError(
+        "The requested account or resource could not be found. It may not exist on this network."
+      );
+    }
+
+    if (status === 429) {
+      return new RateLimitError(
+        "Horizon is receiving too many requests. Please wait a moment and try again.",
+        { retryAfterMs: this.parseRetryAfterMs(response) }
+      );
+    }
+
+    if (status >= 500) {
+      return new UpstreamError(
+        "Horizon is having a temporary problem on its side. Please try again soon.",
+        { upstreamStatus: status, recoverable: true }
+      );
+    }
+
+    return new UpstreamError(
+      `Horizon could not process this request (HTTP ${status} ${response.statusText}). Double-check the account ID and options, then try again.`,
+      { upstreamStatus: status }
+    );
+  }
+
+  /** Reads `Retry-After` (seconds) when the response exposes headers. */
+  private parseRetryAfterMs(response: Response): number | undefined {
+    const raw = (response.headers as { get?: (name: string) => string | null } | undefined)
+      ?.get?.("retry-after");
+    const seconds = raw === null ? Number.NaN : Number(raw);
+    return Number.isFinite(seconds) && seconds > 0 ? Math.round(seconds * 1000) : undefined;
+  }
+
+  async getAccount(accountId: string) {
+    const response = await this.request(`${this.baseUrl}/accounts/${accountId}`);
     return response.json() as Promise<{
       id: string;
       sequence: string;
@@ -124,10 +180,7 @@ export class DefaultHorizonClient implements HorizonClient {
   }> {
     let nextUrl: string | null = `${this.baseUrl}/accounts/${accountId}/transactions?limit=200&order=desc`;
     while (nextUrl) {
-      const response = await fetch(nextUrl);
-      if (!response.ok) {
-        throw new Error(`Horizon error: ${response.status} ${response.statusText}`);
-      }
+      const response = await this.request(nextUrl);
       const data = await response.json() as HorizonTransactionPage;
       for (const tx of data._embedded.records) {
         yield tx as {
