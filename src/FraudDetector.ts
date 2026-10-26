@@ -6,9 +6,18 @@
  */
 
 import { FraudDetectorOptions, HorizonClientLike, resolveConfig } from "./config.js";
-import { ScoreResult, Signal, RiskLevel } from "./types.js";
-import { normalizeScore } from "./scoring/normalize.js";
-import { classifyLevel, DEFAULT_THRESHOLDS } from "./scoring/levels.js";
+import { ScoreResult } from "./types.js";
+import { DEFAULT_THRESHOLDS } from "./scoring/levels.js";
+import { aggregate } from "./scoring/aggregate.js";
+import {
+  ConfigError as TaxonomyConfigError,
+  FraudDetectorError,
+  NetworkError,
+  NotFoundError,
+  RateLimitError,
+  UpstreamError,
+  ValidationError,
+} from "./errors.js";
 
 /**
  * Horizon API response types.
@@ -86,14 +95,66 @@ export class DefaultHorizonClient implements HorizonClient {
     this.baseUrl = horizonUrl.replace(/\/+$/, "");
   }
 
-  async getAccount(accountId: string) {
-    const response = await fetch(`${this.baseUrl}/accounts/${accountId}`);
-    if (!response.ok) {
-      if (response.status === 404) {
-        throw new Error(`Account not found: ${accountId}`);
-      }
-      throw new Error(`Horizon error: ${response.status} ${response.statusText}`);
+  /**
+   * Performs a GET against Horizon, translating transport and HTTP
+   * failures into the shared SDK taxonomy (issue #9).
+   */
+  private async request(url: string): Promise<Response> {
+    let response: Response;
+    try {
+      response = await fetch(url);
+    } catch (error) {
+      throw new NetworkError(
+        "Could not reach Horizon. Check your internet connection and the configured Horizon URL, then try again.",
+        { cause: error }
+      );
     }
+    if (!response.ok) {
+      throw this.toTaxonomyError(response);
+    }
+    return response;
+  }
+
+  /** Maps a failed Horizon HTTP response to a taxonomy error. */
+  private toTaxonomyError(response: Response): FraudDetectorError {
+    const status = response.status;
+
+    if (status === 404) {
+      return new NotFoundError(
+        "The requested account or resource could not be found. It may not exist on this network."
+      );
+    }
+
+    if (status === 429) {
+      return new RateLimitError(
+        "Horizon is receiving too many requests. Please wait a moment and try again.",
+        { retryAfterMs: this.parseRetryAfterMs(response) }
+      );
+    }
+
+    if (status >= 500) {
+      return new UpstreamError(
+        "Horizon is having a temporary problem on its side. Please try again soon.",
+        { upstreamStatus: status, recoverable: true }
+      );
+    }
+
+    return new UpstreamError(
+      `Horizon could not process this request (HTTP ${status} ${response.statusText}). Double-check the account ID and options, then try again.`,
+      { upstreamStatus: status }
+    );
+  }
+
+  /** Reads `Retry-After` (seconds) when the response exposes headers. */
+  private parseRetryAfterMs(response: Response): number | undefined {
+    const raw = (response.headers as { get?: (name: string) => string | null } | undefined)
+      ?.get?.("retry-after");
+    const seconds = raw === null ? Number.NaN : Number(raw);
+    return Number.isFinite(seconds) && seconds > 0 ? Math.round(seconds * 1000) : undefined;
+  }
+
+  async getAccount(accountId: string) {
+    const response = await this.request(`${this.baseUrl}/accounts/${accountId}`);
     return response.json() as Promise<{
       id: string;
       sequence: string;
@@ -119,10 +180,7 @@ export class DefaultHorizonClient implements HorizonClient {
   }> {
     let nextUrl: string | null = `${this.baseUrl}/accounts/${accountId}/transactions?limit=200&order=desc`;
     while (nextUrl) {
-      const response = await fetch(nextUrl);
-      if (!response.ok) {
-        throw new Error(`Horizon error: ${response.status} ${response.statusText}`);
-      }
+      const response = await this.request(nextUrl);
       const data = await response.json() as HorizonTransactionPage;
       for (const tx of data._embedded.records) {
         yield tx as {
@@ -177,38 +235,34 @@ export class DefaultHorizonClient implements HorizonClient {
 
 /**
  * Error taxonomy for FraudDetector operations.
- * Maps external failures to SDK-specific error types.
+ *
+ * The shared taxonomy lives in src/errors.ts (issue #9); the base class
+ * and ValidationError are re-exported here so existing import sites
+ * keep working, and Horizon-specific failures stay classified as
+ * "HORIZON_ERROR".
  */
-export class FraudDetectorError extends Error {
-  public readonly code: string;
-  public readonly recoverable: boolean;
+export { FraudDetectorError, ValidationError };
 
-  constructor(message: string, code: string, recoverable: boolean = false) {
-    super(message);
-    this.name = "FraudDetectorError";
-    this.code = code;
-    this.recoverable = recoverable;
-  }
-}
-
-export class ValidationError extends FraudDetectorError {
-  constructor(message: string) {
-    super(message, "VALIDATION_ERROR");
-  }
-}
-
+/**
+ * Horizon-specific failure. Part of the SDK taxonomy, with the shared
+ * base: it carries the stable "HORIZON_ERROR" code and is marked
+ * recoverable because infrastructure hiccups resolve on retry.
+ */
 export class HorizonError extends FraudDetectorError {
-  constructor(message: string) {
-    super(message, "HORIZON_ERROR", true);
+  constructor(message: string, options: { cause?: unknown } = {}) {
+    super(message, "HORIZON_ERROR", { ...options, recoverable: true });
+    this.name = "HorizonError";
   }
 }
 
 /**
- * Config error specific to FraudDetector (wraps config.ConfigError)
+ * Config error specific to FraudDetector (wraps config.ConfigError
+ * failures raised while resolving constructor options).
  */
-export class DetectorConfigError extends FraudDetectorError {
+export class DetectorConfigError extends TaxonomyConfigError {
   constructor(message: string) {
-    super(message, "CONFIG_ERROR");
+    super(message);
+    this.name = "DetectorConfigError";
   }
 }
 
@@ -266,12 +320,21 @@ export class FraudDetector {
       // Extract features
       const features = this.extractFeatures(account, transactions);
 
-      // Run detectors (rules + statistical + ML)
+      // Run detectors (rules + statistical + ML); each declares its own
+      // uniform signal weight (issue #8).
       const rawSignals = await this.runDetectors(features);
 
-      // Aggregate and normalize
-      const { score, signals } = this.aggregateSignals(rawSignals);
-      const level = classifyLevel(score, this.thresholds);
+      // Combine the weighted detector outputs with the shared scoring
+      // engine: sum, clip to [0, 1], classify the level, and emit the
+      // deterministic ordered explanation.
+      const contributions = rawSignals.map((signal) => ({
+        id: signal.id,
+        weight: signal.rawWeight,
+        detail: signal.detail,
+      }));
+      const { score, level, signals } = aggregate(contributions, {
+        thresholds: this.thresholds,
+      });
 
       return {
         score,
@@ -283,9 +346,11 @@ export class FraudDetector {
       if (error instanceof FraudDetectorError) {
         throw error;
       }
-      // Map unexpected errors to HorizonError
+      // Map unexpected errors to HorizonError, keeping the original
+      // failure on `cause` for debugging (issue #9).
       throw new HorizonError(
-        `Failed to score account: ${error instanceof Error ? error.message : String(error)}`
+        `Failed to score account: ${error instanceof Error ? error.message : String(error)}`,
+        { cause: error }
       );
     }
   }
@@ -333,19 +398,43 @@ export class FraudDetector {
 
   /**
    * Extracts features from account and transaction data.
-   * This is where velocity, graph, asset, and memo features are computed.
+   *
+   * Feature extraction is still a placeholder for the richer velocity /
+   * graph / asset detectors (issues #5+), but the social-graph features
+   * that detectors already consume (unique counterparties, fan-out
+   * ratio, asset diversity, trustlines) are computed for real so the
+   * aggregation engine receives meaningful declared weights.
    */
   private extractFeatures(account: unknown, transactions: unknown[]): FeatureVector {
-    // Placeholder for feature extraction logic
-    // Real implementation will compute velocity, graph, asset, memo features
+    const txs = Array.isArray(transactions) ? transactions : [];
+
+    const counterparties = new Set<string>();
+    const outgoing = new Set<string>();
+    for (const tx of txs) {
+      const t = tx as { to?: unknown; from?: unknown } | null | undefined;
+      if (t && typeof t.to === "string" && t.to) {
+        outgoing.add(t.to);
+        counterparties.add(t.to);
+      }
+      if (t && typeof t.from === "string" && t.from) {
+        counterparties.add(t.from);
+      }
+    }
+
+    const acct = account as { balances?: Array<{ asset_code?: string; asset_type?: string }> } | null;
+    const assetSet = new Set<string>();
+    for (const balance of acct?.balances ?? []) {
+      assetSet.add(balance.asset_code ?? balance.asset_type ?? "native");
+    }
+
     return {
       accountAge: 0,
-      transactionCount: transactions.length,
-      uniqueCounterparties: 0,
-      assetDiversity: 0,
+      transactionCount: txs.length,
+      uniqueCounterparties: counterparties.size,
+      assetDiversity: assetSet.size,
       velocityScore: 0,
-      fanOutRatio: 0,
-      trustlineCount: 0,
+      fanOutRatio: txs.length > 0 ? outgoing.size / txs.length : 0,
+      trustlineCount: acct?.balances?.length ?? 0,
     };
   }
 
@@ -419,30 +508,6 @@ export class FraudDetector {
     }
 
     return signals;
-  }
-
-  /**
-   * Aggregates raw signals into a final score and normalized signal list.
-   */
-  private aggregateSignals(rawSignals: RawSignal[]): { score: number; signals: Signal[] } {
-    if (rawSignals.length === 0) {
-      return { score: 0, signals: [] };
-    }
-
-    // Sum raw weights (preserves ratios)
-    const totalWeight = rawSignals.reduce((sum, s) => sum + s.rawWeight, 0);
-
-    // Normalize to [0, 1]
-    const normalizedScore = normalizeScore(totalWeight);
-
-    // Convert to output signals with normalized weights
-    const signals: Signal[] = rawSignals.map((s) => ({
-      id: s.id,
-      weight: normalizeScore(s.rawWeight / (totalWeight || 1)),
-      detail: s.detail,
-    }));
-
-    return { score: normalizedScore, signals };
   }
 
   /**
