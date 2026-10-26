@@ -9,6 +9,11 @@ import { FraudDetectorOptions, HorizonClientLike, resolveConfig } from "./config
 import { ScoreResult, Signal, RiskLevel } from "./types.js";
 import { normalizeScore } from "./scoring/normalize.js";
 import { classifyLevel, DEFAULT_THRESHOLDS } from "./scoring/levels.js";
+import {
+  ConfigError as TaxonomyConfigError,
+  FraudDetectorError,
+  ValidationError,
+} from "./errors.js";
 
 /**
  * Horizon API response types.
@@ -177,38 +182,34 @@ export class DefaultHorizonClient implements HorizonClient {
 
 /**
  * Error taxonomy for FraudDetector operations.
- * Maps external failures to SDK-specific error types.
+ *
+ * The shared taxonomy lives in src/errors.ts (issue #9); the base class
+ * and ValidationError are re-exported here so existing import sites
+ * keep working, and Horizon-specific failures stay classified as
+ * "HORIZON_ERROR".
  */
-export class FraudDetectorError extends Error {
-  public readonly code: string;
-  public readonly recoverable: boolean;
+export { FraudDetectorError, ValidationError };
 
-  constructor(message: string, code: string, recoverable: boolean = false) {
-    super(message);
-    this.name = "FraudDetectorError";
-    this.code = code;
-    this.recoverable = recoverable;
-  }
-}
-
-export class ValidationError extends FraudDetectorError {
-  constructor(message: string) {
-    super(message, "VALIDATION_ERROR");
-  }
-}
-
+/**
+ * Horizon-specific failure. Part of the SDK taxonomy, with the shared
+ * base: it carries the stable "HORIZON_ERROR" code and is marked
+ * recoverable because infrastructure hiccups resolve on retry.
+ */
 export class HorizonError extends FraudDetectorError {
-  constructor(message: string) {
-    super(message, "HORIZON_ERROR", true);
+  constructor(message: string, options: { cause?: unknown } = {}) {
+    super(message, "HORIZON_ERROR", { ...options, recoverable: true });
+    this.name = "HorizonError";
   }
 }
 
 /**
- * Config error specific to FraudDetector (wraps config.ConfigError)
+ * Config error specific to FraudDetector (wraps config.ConfigError
+ * failures raised while resolving constructor options).
  */
-export class DetectorConfigError extends FraudDetectorError {
+export class DetectorConfigError extends TaxonomyConfigError {
   constructor(message: string) {
-    super(message, "CONFIG_ERROR");
+    super(message);
+    this.name = "DetectorConfigError";
   }
 }
 
@@ -283,9 +284,11 @@ export class FraudDetector {
       if (error instanceof FraudDetectorError) {
         throw error;
       }
-      // Map unexpected errors to HorizonError
+      // Map unexpected errors to HorizonError, keeping the original
+      // failure on `cause` for debugging (issue #9).
       throw new HorizonError(
-        `Failed to score account: ${error instanceof Error ? error.message : String(error)}`
+        `Failed to score account: ${error instanceof Error ? error.message : String(error)}`,
+        { cause: error }
       );
     }
   }
