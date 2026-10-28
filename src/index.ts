@@ -25,3 +25,15 @@ export { classifyLevel, classify, getSuggestedAction, validateThresholds, DEFAUL
 export { aggregate } from "./scoring/aggregate.js";
 export type { AggregateOptions } from "./scoring/aggregate.js";
 export { ScoreResult, Signal, RiskLevel, AccountRisk } from "./types.js";
+export {
+  HorizonRestClient,
+  createHorizonRestClient,
+  validateAccountId,
+  normalizeAccount,
+} from "./clients/horizon.js";
+export type {
+  Account,
+  AccountBalance,
+  AccountSigner,
+  HorizonRestClientOptions,
+} from "./clients/horizon.js";
