@@ -23,6 +23,23 @@ export { NetworkPreset, NETWORK_PRESETS, getNetworkPreset, isSupportedNetwork } 
 export { normalizeScore, normalizeScoreWithRange, clipToUnitInterval, roundToPrecision, DEFAULT_SCORE_PRECISION } from "./scoring/normalize.js";
 export { classifyLevel, classify, getSuggestedAction, validateThresholds, DEFAULT_THRESHOLDS } from "./scoring/levels.js";
 export { aggregate, compareSignals } from "./scoring/aggregate.js";
+export {
+  createLogger,
+  setLogger,
+  getLogger,
+  resetLogger,
+  redact,
+  asSink,
+  DEFAULT_LOG_LEVEL,
+} from "./logging.js";
+export type {
+  Logger,
+  LoggerOptions,
+  LogSink,
+  HostLogger,
+  LogContext,
+  LogLevel,
+} from "./logging.js";
 export type { AggregateOptions } from "./scoring/aggregate.js";
 export { ScoreResult, Signal, RiskLevel, AccountRisk } from "./types.js";
 export {

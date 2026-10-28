@@ -9,6 +9,7 @@ import { FraudDetectorOptions, HorizonClientLike, resolveConfig } from "./config
 import { ScoreResult } from "./types.js";
 import { DEFAULT_THRESHOLDS } from "./scoring/levels.js";
 import { aggregate } from "./scoring/aggregate.js";
+import { getLogger, type Logger } from "./logging.js";
 import {
   ConfigError as TaxonomyConfigError,
   FraudDetectorError,
@@ -279,6 +280,8 @@ export class FraudDetector {
   private readonly options: FraudDetectorOptions;
   private readonly horizon: HorizonClient;
   private readonly thresholds: { low: number; high: number };
+  /** Structured logger, scoped to this detector instance (issue #10). */
+  private readonly logger: Logger;
 
   /**
    * Creates a new FraudDetector instance.
@@ -292,6 +295,10 @@ export class FraudDetector {
       ? (this.options.horizonClient as HorizonClient)
       : new DefaultHorizonClient(this.options.horizonUrl ?? "");
     this.thresholds = this.options.thresholds ?? DEFAULT_THRESHOLDS;
+    this.logger = (this.options.logger ?? getLogger()).child({
+      module: "FraudDetector",
+      network: this.options.network,
+    });
   }
 
   /**
@@ -309,6 +316,13 @@ export class FraudDetector {
   async scoreAccount(accountId: string): Promise<ScoreResult> {
     // Validate address before any network call
     this.validateAddress(accountId);
+
+    // Observability (issue #10): each scoring op gets a request id and
+    // duration; log context carries ids/codes/latency, never payloads
+    // or secrets (#76).
+    const requestId = `acct_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
+    const startedAt = Date.now();
+    this.logger.info("score.start", { requestId, accountId });
 
     try {
       // Fetch account and transactions in parallel
@@ -336,13 +350,29 @@ export class FraudDetector {
         thresholds: this.thresholds,
       });
 
-      return {
+      const result: ScoreResult = {
         score,
         level,
         signals,
         baseline: this.computeBaseline(features),
       };
+      this.logger.info("score.complete", {
+        requestId,
+        accountId,
+        latencyMs: Date.now() - startedAt,
+        score: result.score,
+        level: result.level,
+        signalCount: result.signals.length,
+      });
+      return result;
     } catch (error) {
+      this.logger.error("score.failed", {
+        requestId,
+        accountId,
+        latencyMs: Date.now() - startedAt,
+        errorCode: error instanceof FraudDetectorError ? error.code : "UNKNOWN",
+        errorMessage: error instanceof Error ? error.message : String(error),
+      });
       if (error instanceof FraudDetectorError) {
         throw error;
       }
