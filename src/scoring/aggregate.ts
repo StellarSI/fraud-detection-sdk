@@ -36,6 +36,21 @@ export interface AggregateOptions {
 }
 
 /**
+ * Deterministic comparator for explanation signals (issue #11).
+ *
+ * Ordering rule: descending `weight`; equal weights break ties by
+ * ascending `id` (lexicographic, byte order). The comparator is pure:
+ * it depends only on its two arguments, so identical input yields
+ * identical output order regardless of insertion order or run.
+ */
+export function compareSignals(a: Signal, b: Signal): number {
+  if (b.weight !== a.weight) {
+    return b.weight - a.weight;
+  }
+  return a.id < b.id ? -1 : a.id > b.id ? 1 : 0;
+}
+
+/**
  * Aggregates weighted detector signals into a scored, explained result.
  *
  * @param signals - Detector outputs, each carrying its declared weight.
@@ -95,13 +110,8 @@ export function aggregate(
   }));
 
   // 5. Descending weight; equal weights break ties by signal id so the
-  //    same input always produces the same output order (#89).
-  ordered.sort((a, b) => {
-    if (b.weight !== a.weight) {
-      return b.weight - a.weight;
-    }
-    return a.id < b.id ? -1 : a.id > b.id ? 1 : 0;
-  });
+  //    same input always produces the same output order (#89, #11).
+  ordered.sort(compareSignals);
 
   return {
     score,

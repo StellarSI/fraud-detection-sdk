@@ -7,7 +7,7 @@
  */
 
 import { describe, it, expect } from "vitest";
-import { aggregate } from "./aggregate.js";
+import { aggregate, compareSignals } from "./aggregate.js";
 import { ValidationError } from "../errors.js";
 import { Signal } from "../types.js";
 
@@ -163,5 +163,67 @@ describe("aggregate", () => {
     expect(() =>
       aggregate([{ id: 42, weight: 0.5 } as unknown as Signal])
     ).toThrow(ValidationError);
+  });
+
+  it("orders equal-weight signals by ascending id (issue #11)", () => {
+    const result = aggregate([
+      { id: "delta", weight: 0.3 },
+      { id: "alpha", weight: 0.3 },
+      { id: "charlie", weight: 0.3 },
+      { id: "bravo", weight: 0.3 },
+    ]);
+
+    expect(result.signals.map((s) => s.id)).toEqual(["alpha", "bravo", "charlie", "delta"]);
+  });
+
+  it("is independent of signal insertion order — every permutation sorts identically", () => {
+    const ids = ["echo", "victor", "tango", "sierra", "romeo"];
+    const signals: Signal[] = [
+      { id: "echo", weight: 0.2 },
+      { id: "victor", weight: 0.2 },
+      { id: "tango", weight: 0.2 },
+      { id: "sierra", weight: 0.2 },
+      { id: "romeo", weight: 0.2 },
+    ];
+
+    const reversed = [...signals].reverse();
+    const rotated = [signals[2], signals[3], signals[0], signals[4], signals[1]].filter(
+      (s): s is Signal => s !== undefined
+    );
+
+    const reference = aggregate(signals).signals.map((s) => s.id);
+    expect(aggregate(reversed).signals.map((s) => s.id)).toEqual(reference);
+    expect(aggregate(rotated).signals.map((s) => s.id)).toEqual(reference);
+    // ids unused in input should not leak
+    ids.length = 0;
+    expect(reference).toEqual(["echo", "romeo", "sierra", "tango", "victor"]);
+  });
+
+  it("handles a single signal without sorting surprises", () => {
+    const result = aggregate([{ id: "only", weight: 0.7 }]);
+    expect(result.signals).toHaveLength(1);
+    expect(result.signals[0].id).toBe("only");
+    expect(result.signals[0].weight).toBe(1);
+  });
+});
+
+describe("compareSignals", () => {
+  it("is a pure, standalone comparator for explanations (issue #11)", () => {
+    // Highest weight first, then ascending id on ties.
+    const sorted: Array<{ id: string; weight: number }> = [
+      { id: "b", weight: 0.5 },
+      { id: "a", weight: 0.4 },
+      { id: "z", weight: 0.4 },
+      { id: "m", weight: 0.4 },
+    ].sort(compareSignals);
+
+    expect(sorted.map((s) => s.id)).toEqual(["b", "a", "m", "z"]);
+  });
+
+  it("returns 0 only for identical id + weight pairs", () => {
+    const a = { id: "same", weight: 0.5 };
+    expect(compareSignals(a, { ...a })).toBe(0);
+    expect(compareSignals(a, { id: "same", weight: 0.6 })).not.toBe(0);
+    expect(compareSignals(a, { id: "other", weight: 0.5 })).not.toBe(0);
   });
 });

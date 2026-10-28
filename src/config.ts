@@ -72,6 +72,12 @@ export interface FraudDetectorOptions {
     /** Score above this is classified as "high". Default: 0.70 */
     high: number;
   };
+  /**
+   * Optional structured logger (issue #10).
+   * If omitted, the shared SDK logger (src/logging.ts) is used.
+   * Inject your own to route events into existing observability stacks.
+   */
+  logger?: import("./logging.js").Logger;
 }
 
 /**
@@ -180,6 +186,7 @@ export function resolveConfig(options: Partial<FraudDetectorOptions>): FraudDete
     horizonUrl,
     horizonClient: options.horizonClient,
     thresholds,
+    logger: options.logger,
   };
 }
 

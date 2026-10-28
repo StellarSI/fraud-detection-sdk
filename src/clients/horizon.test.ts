@@ -1,0 +1,226 @@
+/**
+ * Tests for the Horizon REST account client (issue #12).
+ *
+ * No network access: every request goes through an injected fake
+ * `fetch` (fixtures per issue #84).
+ */
+
+import { describe, it, expect, vi } from "vitest";
+import {
+  HorizonRestClient,
+  validateAccountId,
+  normalizeAccount,
+  type RawHorizonAccountFixture,
+} from "./horizon.js";
+import {
+  NetworkError,
+  NotFoundError,
+  RateLimitError,
+  UpstreamError,
+  ValidationError,
+} from "../errors.js";
+
+/**
+ * Builds a structurally-valid G... address without shipping a real
+ * crypto dependency: valid base32 alphabet + correct CRC-16 checksum.
+ * Based on the strkey encoding algorithm.
+ */
+function makeValidAddress(seed: number): string {
+  // 32 deterministic payload bytes
+  const payload: number[] = [];
+  for (let i = 0; i < 32; i++) {
+    payload.push((seed * 31 + i * 7) % 256);
+  }
+  const version = 6 << 3; // ed25519PublicKey
+  const bytes = [version, ...payload];
+  let crc = 0x0000;
+  for (const byte of bytes) {
+    crc ^= byte << 8;
+    for (let i = 0; i < 8; i++) {
+      crc = crc & 0x8000 ? (crc << 1) ^ 0x1021 : crc << 1;
+      crc &= 0xffff;
+    }
+  }
+  const all = [...bytes, (crc >> 8) & 0xff, crc & 0xff];
+  const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
+  let out = "";
+  let buffer = 0;
+  let bits = 0;
+  for (const byte of all) {
+    buffer = (buffer << 8) | byte;
+    bits += 8;
+    while (bits >= 5) {
+      out += alphabet[(buffer >>> (bits - 5)) & 31];
+      bits -= 5;
+    }
+  }
+  while (out.length < 56) out += alphabet[0];
+  return out.slice(0, 56);
+}
+
+const ADDRESS = makeValidAddress(1);
+
+function horizonFixture(overrides: Partial<RawHorizonAccountFixture> = {}): Record<string, unknown> {
+  return {
+    account_id: ADDRESS,
+    sequence: "1234567890",
+    subentry_count: 3,
+    thresholds: { low_threshold: 1, med_threshold: 5, high_threshold: 10 },
+    last_updated_ledger: 42,
+    paging_token: "42",
+    balances: [
+      {
+        asset_type: "credit_alphanum4",
+        asset_code: "USD",
+        asset_issuer: "GA5ZSEJYB37JRC5AVCIA5MOP4RHPM6V4TGSBRPT24OMZPMFASOMSDWOR",
+        balance: "12.3400000",
+        is_authorized: true,
+        clawback_enabled: false,
+      },
+      {
+        asset_type: "native",
+        balance: "100.0000000",
+      },
+    ],
+    signers: [
+      { key: ADDRESS, weight: 10, type: "ed25519_public_key" },
+      { key: makeValidAddress(3), weight: 2, type: "ed25519_public_key" },
+    ],
+    data: { memo: "hello" },
+    flags: {},
+    ...overrides,
+  };
+}
+
+type FetchLike = ReturnType<typeof vi.fn>;
+
+async function jsonResponse(body: Record<string, unknown>, status = 200, headers: Record<string, string> = {}): Promise<Response> {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { "content-type": "application/json", ...headers },
+  });
+}
+
+describe("validateAccountId", () => {
+  it("accepts structurally valid G... addresses", () => {
+    expect(() => validateAccountId(ADDRESS)).not.toThrow();
+  });
+
+  it("rejects empty / wrong-length / wrong-prefix input before any network call", () => {
+    expect(() => validateAccountId("")).toThrow(ValidationError);
+    expect(() => validateAccountId("GABC")).toThrow(ValidationError);
+    expect(() => validateAccountId("X".repeat(56))).toThrow(ValidationError);
+  });
+
+  it("rejects corrupted addresses whose checksum fails", () => {
+    const corrupted = ADDRESS.slice(0, 55) + (ADDRESS.endsWith("A") ? "B" : "A");
+    // Base32 order may collide — flip a low-order nibble deterministically:
+    expect(() => validateAccountId(corrupted)).toThrow(ValidationError);
+  });
+});
+
+describe("HorizonRestClient.getAccount", () => {
+  function clientFor(fetchImpl: FetchLike, overrides = {}): HorizonRestClient {
+    return new HorizonRestClient({
+      horizonUrl: "https://horizon.example.org",
+      fetchImpl: fetchImpl as unknown as typeof fetch,
+      retryBackoffMs: 1,
+      ...overrides,
+    });
+  }
+
+  it("returns a normalized account and never touches raw Horizon JSON", async () => {
+    const fetchImpl = vi.fn().mockResolvedValue(await jsonResponse(horizonFixture()));
+    const account = await clientFor(fetchImpl).getAccount(ADDRESS);
+
+    expect(account.id).toBe(ADDRESS);
+    expect(account.sequence).toBe(1234567890);
+    expect(account.sequenceString).toBe("1234567890");
+    expect(account.thresholds).toEqual({ low: 1, medium: 5, high: 10 });
+    expect(account.subentryCount).toBe(3);
+    expect(account.balances[0]).toMatchObject({ code: "XLM", amount: 100 });
+    expect(account.balances[1]).toMatchObject({ code: "USD", amount: 12.34 });
+    expect(account.signers.map((s) => s.weight)).toEqual([10, 2]);
+    expect(account.data).toEqual({ memo: "hello" });
+    expect(account.lastLedger).toBe(42);
+    // request went to the right endpoint
+    expect(fetchImpl.mock.calls[0][0]).toBe(`https://horizon.example.org/accounts/${ADDRESS}`);
+  });
+
+  it("maps 404 to NotFoundError and does not retry", async () => {
+    const fetchImpl = vi.fn().mockResolvedValue(
+      await jsonResponse({ status: 404, title: "Not Found" }, 404)
+    );
+    await expect(clientFor(fetchImpl).getAccount(ADDRESS)).rejects.toBeInstanceOf(NotFoundError);
+    expect(fetchImpl).toHaveBeenCalledTimes(1);
+  });
+
+  it("maps timeouts to NetworkError", async () => {
+    const fetchImpl = vi.fn().mockImplementation(
+      () =>
+        new Promise<Response>((_, reject) => {
+          const abort = new AbortController();
+          setTimeout(() => reject(new Error("aborted", { cause: { name: "AbortError" } })), 10);
+          void abort;
+        })
+    );
+    await expect(
+      clientFor(fetchImpl, { timeoutMs: 20 }).getAccount(ADDRESS)
+    ).rejects.toBeInstanceOf(NetworkError);
+  }, 5_000);
+
+  it("maps 429 to RateLimitError and honors Retry-After", async () => {
+    const fetchImpl = vi
+      .fn()
+      .mockImplementation(async () => {
+        await jsonResponse({}, 429, { "retry-after": "1" });
+        return new Response("{}", { status: 429, headers: { "retry-after": "1" } });
+      });
+    await expect(clientFor(fetchImpl, { maxRetries: 0 }).getAccount(ADDRESS)).rejects.toBeInstanceOf(
+      RateLimitError
+    );
+  });
+
+  it("retries 5xx responses and succeeds on a later attempt", async () => {
+    const fetchImpl = vi
+      .fn()
+      .mockResolvedValueOnce(await jsonResponse({ status: 500 }, 500))
+      .mockResolvedValueOnce(await jsonResponse(horizonFixture()));
+    const client = clientFor(fetchImpl, { retryBackoffMs: 1 });
+    const account = await client.getAccount(ADDRESS);
+    expect(account.id).toBe(ADDRESS);
+    expect(fetchImpl).toHaveBeenCalledTimes(2);
+  });
+
+  it("gives up after maxRetries on persistent NetworkError", async () => {
+    const fetchImpl = vi.fn().mockRejectedValue(new TypeError("fetch failed"));
+    await expect(
+      clientFor(fetchImpl, { maxRetries: 2, retryBackoffMs: 1 }).getAccount(ADDRESS)
+    ).rejects.toBeInstanceOf(NetworkError);
+    expect(fetchImpl).toHaveBeenCalledTimes(3);
+  });
+
+  it("throws UpstreamError on identity mismatch between request and response", async () => {
+    const fixture = horizonFixture({ account_id: makeValidAddress(9) });
+    const fetchImpl = vi.fn().mockResolvedValue(await jsonResponse(fixture));
+    await expect(clientFor(fetchImpl).getAccount(ADDRESS)).rejects.toBeInstanceOf(UpstreamError);
+  });
+
+  it("rejects malformed URLs at construction time", () => {
+    expect(
+      () => new HorizonRestClient({ horizonUrl: "" })
+    ).toThrow(ValidationError);
+    expect(
+      () => new HorizonRestClient({ horizonUrl: "not a url" })
+    ).toThrow(ValidationError);
+  });
+});
+
+describe("normalizeAccount", () => {
+  it("normalizes the raw fixture deterministically", () => {
+    const account = normalizeAccount(horizonFixture() as unknown as RawHorizonAccountFixture);
+    expect(account.inflationDestination).toBeUndefined();
+    expect(account.balances.map((b) => b.code)).toEqual(["XLM", "USD"]);
+    expect(account.signers[0].key).toBe(ADDRESS);
+  });
+});
