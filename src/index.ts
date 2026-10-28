@@ -22,7 +22,7 @@ export {
 export { NetworkPreset, NETWORK_PRESETS, getNetworkPreset, isSupportedNetwork } from "./network.js";
 export { normalizeScore, normalizeScoreWithRange, clipToUnitInterval, roundToPrecision, DEFAULT_SCORE_PRECISION } from "./scoring/normalize.js";
 export { classifyLevel, classify, getSuggestedAction, validateThresholds, DEFAULT_THRESHOLDS } from "./scoring/levels.js";
-export { aggregate } from "./scoring/aggregate.js";
+export { aggregate, compareSignals } from "./scoring/aggregate.js";
 export type { AggregateOptions } from "./scoring/aggregate.js";
 export { ScoreResult, Signal, RiskLevel, AccountRisk } from "./types.js";
 export {
