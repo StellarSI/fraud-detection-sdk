@@ -47,10 +47,19 @@ export {
   createHorizonRestClient,
   validateAccountId,
   normalizeAccount,
+  normalizeTransaction,
+  paginate,
+  collect,
+  DEFAULT_PAGINATION_LIMIT,
 } from "./clients/horizon.js";
 export type {
   Account,
   AccountBalance,
   AccountSigner,
+  Transaction,
+  GetTransactionsOptions,
+  Page,
+  FetchPage,
+  PaginateOptions,
   HorizonRestClientOptions,
 } from "./clients/horizon.js";
