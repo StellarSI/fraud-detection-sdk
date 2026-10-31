@@ -302,3 +302,150 @@ describe("paginate (issue #14)", () => {
     await expect(collect(paginate(fetchPage, { limit: -1 }))).rejects.toThrow();
   });
 });
+
+describe("HorizonRestClient.getTransactions (issue #13)", () => {
+  function transactionFixture(overrides: Record<string, unknown> = {}): Record<string, unknown> {
+    return {
+      id: "abc123",
+      paging_token: "88",
+      created_at: "2026-01-01T00:00:00Z",
+      source_account: ADDRESS,
+      type: "payment",
+      amount: "25.0000000",
+      asset_code: "USD",
+      asset_issuer: "GA5ZSEJYB37JRC5AVCIA5MOP4RHPM6V4TGSBRPT24OMZPMFASOMSDWOR",
+      from: ADDRESS,
+      to: makeValidAddress(2),
+      memo: "invoice-1",
+      memo_type: "text",
+      successful: true,
+      ledger: 100,
+      ...overrides,
+    };
+  }
+
+  /** Builds a HAL collection page with an optional `next` link. */
+  function transactionPage(
+    records: Record<string, unknown>[],
+    nextHref?: string
+  ): Record<string, unknown> {
+    const links: Record<string, unknown> = {};
+    if (nextHref) {
+      links.next = { href: nextHref };
+    }
+    return { _embedded: { records }, _links: links };
+  }
+
+  function clientFor(fetchImpl: FetchLike, overrides = {}): HorizonRestClient {
+    return new HorizonRestClient({
+      horizonUrl: "https://horizon.example.org",
+      fetchImpl: fetchImpl as unknown as typeof fetch,
+      retryBackoffMs: 1,
+      ...overrides,
+    });
+  }
+
+  it("returns normalized transactions for a valid address (single page)", async () => {
+    const fetchImpl = vi
+      .fn()
+      .mockResolvedValue(await jsonResponse(transactionPage([transactionFixture()])));
+    const txs = await clientFor(fetchImpl).getTransactions(ADDRESS);
+
+    expect(txs).toHaveLength(1);
+    expect(txs[0]).toMatchObject({
+      id: "abc123",
+      sourceAccount: ADDRESS,
+      type: "payment",
+      amount: 25,
+      assetCode: "USD",
+      to: makeValidAddress(2),
+      memo: "invoice-1",
+      memoType: "text",
+      successful: true,
+      ledger: 100,
+      pagingToken: "88",
+    });
+    // Request went to the transactions endpoint with sane defaults.
+    const url = String(fetchImpl.mock.calls[0][0]);
+    expect(url).toContain(`https://horizon.example.org/accounts/${ADDRESS}/transactions`);
+    expect(url).toContain("order=desc");
+  });
+
+  it("supports limit/cursor/order parameters in the request URL", async () => {
+    const fetchImpl = vi
+      .fn()
+      .mockResolvedValue(await jsonResponse(transactionPage([transactionFixture()])));
+    await clientFor(fetchImpl).getTransactions(ADDRESS, {
+      cursor: "12345",
+      order: "asc",
+      pageSize: 50,
+      startTime: "2026-01-01T00:00:00Z",
+      endTime: "2026-02-01T00:00:00Z",
+    });
+
+    const url = String(fetchImpl.mock.calls[0][0]);
+    expect(url).toContain("cursor=12345");
+    expect(url).toContain("order=asc");
+    expect(url).toContain("limit=50");
+    expect(url).toContain("start_time=2026-01-01T00%3A00%3A00Z");
+    expect(url).toContain("end_time=2026-02-01T00%3A00%3A00Z");
+  });
+
+  it("paginates across pages transparently and honors a caller limit", async () => {
+    const page1 = transactionPage(
+      [transactionFixture({ id: "t1", paging_token: "1" }), transactionFixture({ id: "t2", paging_token: "2" })],
+      `https://horizon.example.org/accounts/${ADDRESS}/transactions?cursor=2&limit=200`
+    );
+    const page2 = transactionPage(
+      [transactionFixture({ id: "t3", paging_token: "3" })]
+    );
+    const fetchImpl = vi
+      .fn()
+      .mockResolvedValueOnce(await jsonResponse(page1))
+      .mockResolvedValueOnce(await jsonResponse(page2));
+
+    const txs = await clientFor(fetchImpl).getTransactions(ADDRESS, { limit: 3 });
+
+    expect(txs.map((t) => t.id)).toEqual(["t1", "t2", "t3"]);
+    // Both pages fetched; second request used the cursor from the next link.
+    expect(fetchImpl).toHaveBeenCalledTimes(2);
+    expect(String(fetchImpl.mock.calls[1][0])).toContain("cursor=2");
+  });
+
+  it("stops fetching once the caller limit is reached", async () => {
+    const page1 = transactionPage(
+      [transactionFixture({ id: "t1", paging_token: "1" }), transactionFixture({ id: "t2", paging_token: "2" })],
+      `https://horizon.example.org/accounts/${ADDRESS}/transactions?cursor=2&limit=200`
+    );
+    const fetchImpl = vi.fn().mockResolvedValue(await jsonResponse(page1));
+
+    const txs = await clientFor(fetchImpl).getTransactions(ADDRESS, { limit: 2 });
+
+    expect(txs.map((t) => t.id)).toEqual(["t1", "t2"]);
+    expect(fetchImpl).toHaveBeenCalledTimes(1);
+  });
+
+  it("maps 404 to NotFoundError and does not retry", async () => {
+    const fetchImpl = vi.fn().mockResolvedValue(await jsonResponse({ status: 404 }, 404));
+    await expect(clientFor(fetchImpl).getTransactions(ADDRESS)).rejects.toBeInstanceOf(
+      NotFoundError
+    );
+    expect(fetchImpl).toHaveBeenCalledTimes(1);
+  });
+
+  it("rejects an invalid address before any network call", async () => {
+    const fetchImpl = vi.fn();
+    await expect(clientFor(fetchImpl).getTransactions("GABC")).rejects.toBeInstanceOf(
+      ValidationError
+    );
+    expect(fetchImpl).not.toHaveBeenCalled();
+  });
+
+  it("rejects an invalid order value", async () => {
+    const fetchImpl = vi.fn();
+    await expect(
+      clientFor(fetchImpl).getTransactions(ADDRESS, { order: "sideways" as never })
+    ).rejects.toBeInstanceOf(ValidationError);
+    expect(fetchImpl).not.toHaveBeenCalled();
+  });
+});

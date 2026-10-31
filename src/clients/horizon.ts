@@ -88,6 +88,131 @@ export interface Account {
 }
 
 /* ------------------------------------------------------------------ */
+/* Normalized transaction shape (#13)                                  */
+/* ------------------------------------------------------------------ */
+
+/**
+ * A normalized Stellar transaction (issue #13).
+ *
+ * Feature code (velocity #19, memo #22, graph #20) consumes this instead
+ * of raw Horizon JSON, so upstream wire-format changes stay contained in
+ * this module.
+ */
+export interface Transaction {
+  /** Transaction hash / id. */
+  id: string;
+  /** ISO-8601 timestamp the transaction was included in a ledger. */
+  createdAt: string;
+  /** Account that submitted the transaction. */
+  sourceAccount: string;
+  /** Horizon operation type aggregate (e.g. "payment", "create_account"). */
+  type: string;
+  /** Amount, parsed from Horizon's 7-decimal string; 0 when absent. */
+  amount: number;
+  /** Asset code ("XLM" for native) when the transaction carries one. */
+  assetCode?: string;
+  /** Issuer of the asset, when not native. */
+  assetIssuer?: string;
+  /** Sending account when present on the record. */
+  from?: string;
+  /** Recipient account when present on the record. */
+  to?: string;
+  /** Memo attached to the transaction, if any. */
+  memo?: string;
+  /** Memo type ("text", "id", "hash", "return"). */
+  memoType?: string;
+  /** Whether Horizon reports the transaction as successful. */
+  successful?: boolean;
+  /** Ledger the transaction was included in, when reported. */
+  ledger?: number;
+  /** Horizon paging token for pagination callers. */
+  pagingToken: string;
+}
+
+/** Raw shape of Horizon's transaction records (subset we consume). */
+interface RawHorizonTransaction {
+  id: string;
+  paging_token?: string;
+  created_at?: string;
+  source_account?: string;
+  type?: string;
+  amount?: string;
+  asset_code?: string;
+  asset_issuer?: string;
+  from?: string;
+  to?: string;
+  memo?: string;
+  memo_type?: string;
+  successful?: boolean;
+  ledger?: number;
+}
+
+/** Raw HAL envelope for a Horizon collection (transactions, etc.). */
+interface RawHorizonCollection {
+  _embedded?: { records?: RawHorizonTransaction[] };
+  _links?: { next?: { href?: string } };
+}
+
+/**
+ * Maps a raw Horizon transaction record into the normalized
+ * {@link Transaction} shape (issue #13).
+ *
+ * @param raw - A record from `/accounts/{id}/transactions`.
+ */
+export function normalizeTransaction(raw: RawHorizonTransaction): Transaction {
+  const isNative = raw.asset_code === undefined;
+  return {
+    id: raw.id,
+    createdAt: raw.created_at ?? "",
+    sourceAccount: raw.source_account ?? "",
+    type: raw.type ?? "",
+    amount: parseAmount(raw.amount ?? "0"),
+    assetCode: isNative ? "XLM" : raw.asset_code,
+    assetIssuer: raw.asset_issuer,
+    from: raw.from,
+    to: raw.to,
+    memo: raw.memo,
+    memoType: raw.memo_type,
+    successful: raw.successful,
+    ledger: raw.ledger,
+    pagingToken: raw.paging_token ?? "",
+  };
+}
+
+/** Options for {@link HorizonRestClient.getTransactions} (issue #13). */
+export interface GetTransactionsOptions {
+  /**
+   * Maximum total transactions to return. Honored exactly by the
+   * underlying {@link paginate} helper (#14); defaults to its safe cap.
+   */
+  limit?: number;
+  /** Start paging from this Horizon cursor (paging token). */
+  cursor?: string;
+  /** Paging order: newest-first ("desc", default) or oldest-first ("asc"). */
+  order?: "asc" | "desc";
+  /**
+   * Per-request page size sent to Horizon (1-200). Distinct from `limit`,
+   * which bounds the overall result. Default: 200.
+   */
+  pageSize?: number;
+  /** Only include transactions at or after this ISO-8601 time (batch windows, #58). */
+  startTime?: string;
+  /** Only include transactions at or before this ISO-8601 time. */
+  endTime?: string;
+}
+
+/** Horizon caps a single page at 200 records. */
+const MAX_PAGE_SIZE = 200;
+
+/** Clamps a caller page size into Horizon's valid 1..200 range. */
+function clampPageSize(pageSize: number | undefined): number {
+  if (pageSize === undefined || !Number.isFinite(pageSize)) {
+    return MAX_PAGE_SIZE;
+  }
+  return Math.min(Math.max(Math.trunc(pageSize), 1), MAX_PAGE_SIZE);
+}
+
+/* ------------------------------------------------------------------ */
 /* Address validation (#75)                                            */
 /* ------------------------------------------------------------------ */
 
@@ -576,6 +701,110 @@ export class HorizonRestClient {
       });
     }
     return normalizeAccount(raw);
+  }
+
+  /**
+   * Streams an account's transactions from Horizon (issue #13).
+   *
+   * Hits `/accounts/{id}/transactions`, following pagination via the
+   * generic {@link paginate} helper (#14) so multi-page histories are
+   * retrieved transparently. Each record is normalized into a
+   * {@link Transaction}; errors are mapped through the shared taxonomy
+   * (#18) by the retrying transport.
+   *
+   * @param address - Stellar account ID (G... format).
+   * @param options - Paging, ordering, and date-range filters.
+   * @returns An async iterable of normalized transactions.
+   * @throws {ValidationError} If the address or `order` is invalid.
+   * @throws {NotFoundError} When the account does not exist.
+   * @throws {RateLimitError} When Horizon asks the caller to slow down.
+   */
+  async *getTransactionsStream(
+    address: string,
+    options: GetTransactionsOptions = {}
+  ): AsyncIterable<Transaction> {
+    validateAccountId(address);
+    if (options.order !== undefined && options.order !== "asc" && options.order !== "desc") {
+      throw new ValidationError(`order must be "asc" or "desc", got "${options.order}"`);
+    }
+
+    yield* paginate<Transaction>(
+      async (cursor) => {
+        // paginate supplies the cursor from the previous page; the very
+        // first request instead uses the caller's starting cursor (#13).
+        const effectiveCursor = cursor ?? options.cursor;
+        const url = this.buildTransactionsUrl(address, effectiveCursor, options);
+        const response = await this.getWithRetry(url);
+        const body = (await response.json()) as RawHorizonCollection;
+        const records = (body._embedded?.records ?? []).map(normalizeTransaction);
+        const nextCursor = this.extractNextCursor(body, records);
+        return { records, nextCursor };
+      },
+      { limit: options.limit }
+    );
+  }
+
+  /**
+   * Fetches an account's transactions into an array (issue #13).
+   *
+   * Convenience wrapper over {@link getTransactionsStream} that collects
+   * up to `options.limit` normalized transactions. Pagination is handled
+   * internally and is transparent to the caller.
+   *
+   * @param address - Stellar account ID (G... format).
+   * @param options - Paging, ordering, and date-range filters.
+   * @returns The normalized transactions, in page order.
+   */
+  async getTransactions(
+    address: string,
+    options: GetTransactionsOptions = {}
+  ): Promise<Transaction[]> {
+    return collect(this.getTransactionsStream(address, options));
+  }
+
+  /** Builds the `/accounts/{id}/transactions` URL with paging/filters. */
+  private buildTransactionsUrl(
+    address: string,
+    cursor: string | undefined,
+    options: GetTransactionsOptions
+  ): string {
+    const params = new URLSearchParams();
+    params.set("limit", String(clampPageSize(options.pageSize)));
+    params.set("order", options.order ?? "desc");
+    if (cursor) {
+      params.set("cursor", cursor);
+    }
+    if (options.startTime) {
+      params.set("start_time", options.startTime);
+    }
+    if (options.endTime) {
+      params.set("end_time", options.endTime);
+    }
+    return `${this.baseUrl}/accounts/${address}/transactions?${params.toString()}`;
+  }
+
+  /**
+   * Derives the next-page cursor from Horizon's HAL `next` link, falling
+   * back to the last record's paging token when the link omits one.
+   */
+  private extractNextCursor(
+    body: RawHorizonCollection,
+    records: Transaction[]
+  ): string | undefined {
+    const nextHref = body._links?.next?.href;
+    if (!nextHref) {
+      return undefined;
+    }
+    try {
+      const parsed = new URL(nextHref, this.baseUrl);
+      const fromLink = parsed.searchParams.get("cursor");
+      if (fromLink) {
+        return fromLink;
+      }
+    } catch {
+      // Malformed next link — fall through to the paging-token fallback.
+    }
+    return records[records.length - 1]?.pagingToken || undefined;
   }
 }
 
