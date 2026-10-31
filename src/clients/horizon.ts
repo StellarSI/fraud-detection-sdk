@@ -183,6 +183,116 @@ export function validateAccountId(address: string): void {
 }
 
 /* ------------------------------------------------------------------ */
+/* Generic pagination (#14)                                            */
+/* ------------------------------------------------------------------ */
+
+/** A single page returned by a cursor-paginated resource. */
+export interface Page<T> {
+  /** Normalized records belonging to this page. */
+  records: T[];
+  /**
+   * Opaque cursor for the following page, or `undefined` when this is the
+   * last page. Supplying it lets {@link paginate} keep walking until the
+   * resource is exhausted.
+   */
+  nextCursor?: string;
+}
+
+/**
+ * Fetches one page of a paginated resource starting at `cursor`.
+ * Implementations should return an empty `records` array (or omit
+ * `nextCursor`) to signal the end of the collection.
+ */
+export type FetchPage<T> = (cursor?: string) => Promise<Page<T>>;
+
+/** Options controlling {@link paginate}. */
+export interface PaginateOptions {
+  /**
+   * Maximum total items to yield across every page. The limit is honored
+   * exactly: iteration stops as soon as it is reached, even mid-page.
+   * Defaults to {@link DEFAULT_PAGINATION_LIMIT}.
+   */
+  limit?: number;
+}
+
+/**
+ * Safe upper bound on items a single {@link paginate} run will yield by
+ * default, so a runaway resource cannot stream unbounded into memory.
+ */
+export const DEFAULT_PAGINATION_LIMIT = 10_000;
+
+/**
+ * Generic async-iterator over a cursor-paginated resource (issue #14).
+ *
+ * Repeatedly calls `fetchPage`, yielding every record and following the
+ * returned `nextCursor` until the resource is exhausted or `limit` items
+ * have been produced. Retries, backoff, and error mapping are the
+ * responsibility of `fetchPage` (the Horizon client wires its retrying
+ * transport in underneath).
+ *
+ * @param fetchPage - Callback that retrieves a single page at a cursor.
+ * @param options - Pagination bounds; see {@link PaginateOptions}.
+ * @returns An async iterable of every record, in page order.
+ *
+ * @example
+ * ```ts
+ * for await (const tx of paginate((cursor) => fetchTxPage(cursor))) {
+ *   process(tx);
+ * }
+ * ```
+ */
+export async function* paginate<T>(
+  fetchPage: FetchPage<T>,
+  options: PaginateOptions = {}
+): AsyncIterable<T> {
+  const limit = options.limit ?? DEFAULT_PAGINATION_LIMIT;
+  if (!Number.isFinite(limit) || limit < 0) {
+    throw new ValidationError("limit must be a non-negative finite number");
+  }
+  if (limit === 0) {
+    return;
+  }
+
+  let cursor: string | undefined;
+  let produced = 0;
+
+  for (;;) {
+    const page = await fetchPage(cursor);
+    if (page.records.length === 0) {
+      return; // Exhausted.
+    }
+    for (const record of page.records) {
+      if (produced >= limit) {
+        return; // Caller limit reached exactly.
+      }
+      yield record;
+      produced += 1;
+    }
+    if (page.nextCursor === undefined || page.nextCursor === null) {
+      return; // No further pages.
+    }
+    cursor = page.nextCursor;
+  }
+}
+
+/**
+ * Drains an async iterable into an array (issue #14).
+ *
+ * Convenience counterpart to {@link paginate} for callers that want the
+ * whole (already bounded) collection in memory rather than streaming it.
+ *
+ * @param iterable - Any async iterable, e.g. the result of {@link paginate}.
+ * @returns Every item produced by the iterable, in order.
+ */
+export async function collect<T>(iterable: AsyncIterable<T>): Promise<T[]> {
+  const items: T[] = [];
+  for await (const item of iterable) {
+    items.push(item);
+  }
+  return items;
+}
+
+/* ------------------------------------------------------------------ */
 /* Client                                                              */
 /* ------------------------------------------------------------------ */
 
@@ -349,10 +459,21 @@ export class HorizonRestClient {
   private retryDelayFor(error: unknown, attempt: number): number {
     const retryAfterMs = (error as { retryAfterMs?: number }).retryAfterMs;
     if (typeof retryAfterMs === "number" && retryAfterMs > 0) {
-      return retryAfterMs;
+      // Honor the server-provided Retry-After, but add jitter so a burst
+      // of rate-limited callers does not retry in lockstep (#14).
+      return retryAfterMs + this.jitter(retryAfterMs);
     }
     // Exponential backoff: base * 2^attempt, capped to avoid runaway waits.
-    return Math.min(this.retryBackoffMs * 2 ** attempt, 4_000);
+    const backoff = Math.min(this.retryBackoffMs * 2 ** attempt, 4_000);
+    return backoff + this.jitter(backoff);
+  }
+
+  /**
+   * Returns a small random delay proportional to `base` so retries are
+   * spread out instead of firing in lockstep (full-jitter style, #14).
+   */
+  private jitter(base: number): number {
+    return Math.round(Math.random() * base * 0.1);
   }
 
   /** Aborts the in-flight request when the configured timeout elapses. */

@@ -10,6 +10,10 @@ import {
   HorizonRestClient,
   validateAccountId,
   normalizeAccount,
+  paginate,
+  collect,
+  DEFAULT_PAGINATION_LIMIT,
+  type Page,
   type RawHorizonAccountFixture,
 } from "./horizon.js";
 import {
@@ -222,5 +226,79 @@ describe("normalizeAccount", () => {
     expect(account.inflationDestination).toBeUndefined();
     expect(account.balances.map((b) => b.code)).toEqual(["XLM", "USD"]);
     expect(account.signers[0].key).toBe(ADDRESS);
+  });
+});
+
+describe("paginate (issue #14)", () => {
+  /** Builds a fetchPage that serves `pages` in order, tracking cursors. */
+  function pagedFetcher(pages: Record<string, Page<number>>) {
+    const calls: Array<string | undefined> = [];
+    const fetchPage = async (cursor?: string): Promise<Page<number>> => {
+      calls.push(cursor);
+      return pages[cursor ?? "start"];
+    };
+    return { fetchPage, calls };
+  }
+
+  it("walks every page following nextCursor until exhaustion (multi-page)", async () => {
+    const { fetchPage, calls } = pagedFetcher({
+      start: { records: [1, 2], nextCursor: "p2" },
+      p2: { records: [3, 4], nextCursor: "p3" },
+      p3: { records: [5], nextCursor: undefined },
+    });
+
+    const items = await collect(paginate(fetchPage));
+
+    expect(items).toEqual([1, 2, 3, 4, 5]);
+    // First call has no cursor; subsequent calls follow the chain.
+    expect(calls).toEqual([undefined, "p2", "p3"]);
+  });
+
+  it("returns the records of a single-page response without extra fetches", async () => {
+    const { fetchPage, calls } = pagedFetcher({
+      start: { records: [10, 20, 30] },
+    });
+
+    const items = await collect(paginate(fetchPage));
+
+    expect(items).toEqual([10, 20, 30]);
+    expect(calls).toHaveLength(1);
+  });
+
+  it("honors a caller limit exactly, stopping mid-page when needed", async () => {
+    const { fetchPage, calls } = pagedFetcher({
+      start: { records: [1, 2, 3, 4, 5], nextCursor: "p2" },
+      p2: { records: [6, 7], nextCursor: undefined },
+    });
+
+    const items = await collect(paginate(fetchPage, { limit: 3 }));
+
+    expect(items).toEqual([1, 2, 3]);
+    // Stops as soon as the limit is hit — never fetches the second page.
+    expect(calls).toEqual([undefined]);
+  });
+
+  it("stops on an empty page even if a nextCursor is present", async () => {
+    const { fetchPage } = pagedFetcher({
+      start: { records: [] as number[], nextCursor: "p2" },
+    });
+    await expect(collect(paginate(fetchPage))).resolves.toEqual([]);
+  });
+
+  it("yields nothing for a limit of 0 without fetching", async () => {
+    const { fetchPage, calls } = pagedFetcher({
+      start: { records: [1, 2] },
+    });
+    await expect(collect(paginate(fetchPage, { limit: 0 }))).resolves.toEqual([]);
+    expect(calls).toHaveLength(0);
+  });
+
+  it("defaults the bound to DEFAULT_PAGINATION_LIMIT", async () => {
+    expect(DEFAULT_PAGINATION_LIMIT).toBeGreaterThan(0);
+  });
+
+  it("rejects a negative limit", async () => {
+    const { fetchPage } = pagedFetcher({ start: { records: [1] } });
+    await expect(collect(paginate(fetchPage, { limit: -1 }))).rejects.toThrow();
   });
 });
