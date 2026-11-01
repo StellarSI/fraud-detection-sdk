@@ -52,6 +52,18 @@ export {
   collect,
   DEFAULT_PAGINATION_LIMIT,
 } from "./clients/horizon.js";
+export {
+  withRetry,
+  fetchWithRetry,
+  type RetryOptions,
+} from "./clients/http.js";
+export {
+  TransactionAnalyticsClient,
+  createTransactionAnalyticsClient,
+  normalizeTransactionAnalyticsAccount,
+  normalizeTransactionAnalyticsFlow,
+  validateAccountId as validateTransactionAnalyticsAccountId,
+} from "./clients/transactionAnalytics.js";
 export type {
   Account,
   AccountBalance,
@@ -63,3 +75,4 @@ export type {
   PaginateOptions,
   HorizonRestClientOptions,
 } from "./clients/horizon.js";
+export type { DataSource } from "./clients/transactionAnalytics.js";
