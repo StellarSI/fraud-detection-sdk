@@ -16,9 +16,7 @@
 
 import {
   NetworkError,
-  RateLimitError,
   UpstreamError,
-  type FraudDetectorErrorOptions,
 } from "../errors.js";
 
 /** Options for {@link withRetry}. */

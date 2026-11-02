@@ -21,7 +21,7 @@ import {
 import { FraudDetector, DefaultHorizonClient, HorizonError, DetectorConfigError } from "./FraudDetector.js";
 import { ConfigError as DetailedConfigError } from "./config.js";
 
-const VALID_ACCOUNT = "GABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJKLMNOPQRSTUVWXYZABCDEF";
+const VALID_ACCOUNT = "GABCDEFGHIJKLMNOPQRSTUVWXYZ234567ABCDEFGHIJKLMNOPQRSTUVW";
 
 const ERROR_CLASSES: Array<[string, (message: string, options?: FraudDetectorErrorOptions) => FraudDetectorError]> = [
   ["ConfigError", (m, o) => new ConfigError(m, o)],

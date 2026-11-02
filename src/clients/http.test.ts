@@ -5,7 +5,7 @@
  * incurred: `baseDelay` and `maxDelay` are set to 0 or tiny values.
  */
 
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import { withRetry, fetchWithRetry, type RetryOptions } from "./http.js";
 import { NetworkError, UpstreamError } from "../errors.js";
 
@@ -27,15 +27,6 @@ function networkErrorFetch(): typeof fetch {
 }
 
 describe("withRetry", () => {
-  beforeEach(() => {
-    vi.useFakeTimers();
-  });
-
-  afterEach(() => {
-    vi.useRealTimers();
-    vi.restoreAllMocks();
-  });
-
   it("returns immediately on success without retrying", async () => {
     const fn = vi.fn().mockResolvedValue("ok");
     const result = await withRetry(fn);
@@ -90,15 +81,6 @@ describe("withRetry", () => {
 });
 
 describe("fetchWithRetry", () => {
-  beforeEach(() => {
-    vi.useFakeTimers();
-  });
-
-  afterEach(() => {
-    vi.useRealTimers();
-    vi.restoreAllMocks();
-  });
-
   it("returns the response on success", async () => {
     const fetchImpl = failingFetch(200);
     vi.stubGlobal("fetch", fetchImpl);

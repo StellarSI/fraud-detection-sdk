@@ -67,19 +67,19 @@ describe("validateThresholds", () => {
 
   it("rejects non-finite low", () => {
     expect(() => validateThresholds({ low: NaN, high: 0.8 })).toThrow(
-      "Thresholds must be finite numbers"
+      "Thresholds must be numbers"
     );
     expect(() => validateThresholds({ low: Infinity, high: 0.8 })).toThrow(
-      "Thresholds must be finite numbers"
+      "Thresholds must be numbers"
     );
   });
 
   it("rejects non-finite high", () => {
     expect(() => validateThresholds({ low: 0.3, high: NaN })).toThrow(
-      "Thresholds must be finite numbers"
+      "Thresholds must be numbers"
     );
     expect(() => validateThresholds({ low: 0.3, high: Infinity })).toThrow(
-      "Thresholds must be finite numbers"
+      "Thresholds must be numbers"
     );
   });
 

@@ -289,12 +289,13 @@ export function validateAccountId(address: string): void {
       throw new Error(`expected 35 decoded bytes, got ${bytes.length}`);
     }
     const version = bytes[0];
-    const payload = bytes.slice(1, 33);
     const checksum = (bytes[33] << 8) | bytes[34];
     if (version !== 6 << 3 /* Ed25519 public key 'G' */) {
       throw new Error(`unexpected version byte: ${version}`);
     }
-    if (crc16Xmodem(Uint8Array.from(payload)) !== checksum) {
+    // CRC-16/XMODEM is computed over version byte + payload (33 bytes),
+    // matching the Stellar strkey encoding used to generate addresses.
+    if (crc16Xmodem(Uint8Array.from(bytes.slice(0, 33))) !== checksum) {
       throw new Error("checksum mismatch");
     }
   } catch (error) {
@@ -393,7 +394,10 @@ export async function* paginate<T>(
       yield record;
       produced += 1;
     }
-    if (page.nextCursor === undefined || page.nextCursor === null) {
+      if (produced >= limit) {
+        return; // Caller limit reached after consuming this page.
+      }
+      if (page.nextCursor === undefined || page.nextCursor === null) {
       return; // No further pages.
     }
     cursor = page.nextCursor;
@@ -820,3 +824,4 @@ export function createHorizonRestClient(
 export type FraudDetectorErrorOptionsAlias = FraudDetectorErrorOptions;
 /** Test-facing alias for the raw Horizon account shape (fixtures, #84). */
 export type RawHorizonAccountFixture = RawHorizonAccount;
+

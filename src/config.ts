@@ -6,7 +6,6 @@
  */
 
 import { NetworkPreset, NETWORK_PRESETS, SUPPORTED_NETWORKS } from "./network.js";
-import { ThresholdConfig, DEFAULT_THRESHOLDS, validateThresholds } from "./scoring/levels.js";
 import { ConfigError as TaxonomyConfigError } from "./errors.js";
 
 /**
@@ -159,9 +158,11 @@ export function resolveConfig(options: Partial<FraudDetectorOptions>): FraudDete
     thresholds = { low, high };
   }
 
-  // Resolve horizonUrl from preset if not provided
+  // Resolve horizonUrl from preset if not provided.
+  // When a client is injected, horizonUrl is not used, so default it to the
+  // network preset and skip validation.
   let horizonUrl = options.horizonUrl;
-  if (!horizonUrl) {
+  if (!horizonUrl || options.horizonClient) {
     horizonUrl = NETWORK_PRESETS[network].horizonUrl;
   } else {
     // Validate URL format

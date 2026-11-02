@@ -9,11 +9,17 @@
   "scripts": {
     "build": "tsc",
     "typecheck": "tsc --noEmit",
-    "check": "npm run typecheck",
-    "test": "vitest run"
+    "lint": "eslint src --ext .ts",
+    "check": "npm run typecheck && npm run lint && npm test",
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "license": "MIT",
   "devDependencies": {
+    "@types/node": "^20.0.0",
+    "@typescript-eslint/eslint-plugin": "^7.0.0",
+    "@typescript-eslint/parser": "^7.0.0",
+    "eslint": "^8.57.0",
     "typescript": "^5.5.4",
     "vitest": "^2.0.0"
   }

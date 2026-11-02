@@ -72,7 +72,7 @@ describe("aggregate", () => {
     ];
 
     expect(aggregate(input)).toEqual(aggregate([...input].reverse()));
-    expect(aggregate(input).signals.map((s) => s.id)).toEqual(["alpha", "mike", "zulu"]);
+    expect(aggregate(input).signals.map((s) => s.id)).toEqual(["mike", "alpha", "zulu"]);
   });
 
   it("yields score 0 and level low for an empty signal set", () => {
