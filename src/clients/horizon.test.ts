@@ -417,7 +417,7 @@ describe("HorizonRestClient.getTransactions (issue #13)", () => {
       [transactionFixture({ id: "t1", paging_token: "1" }), transactionFixture({ id: "t2", paging_token: "2" })],
       `https://horizon.example.org/accounts/${ADDRESS}/transactions?cursor=2&limit=200`
     );
-    const fetchImpl = vi.fn().mockResolvedValue(await jsonResponse(page1));
+    const fetchImpl = vi.fn().mockImplementation(() => jsonResponse(page1));
 
     const txs = await clientFor(fetchImpl).getTransactions(ADDRESS, { limit: 2 });
 

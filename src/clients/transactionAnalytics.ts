@@ -17,10 +17,8 @@ import {
   AccountSigner,
   Transaction,
   type Page,
-  type FetchPage,
 } from "./horizon.js";
 import {
-  FraudDetectorError,
   NetworkError,
   NotFoundError,
   RateLimitError,

@@ -41,7 +41,7 @@ export function validateThresholds(thresholds: ThresholdConfig): void {
   const { low, high } = thresholds;
 
   if (!Number.isFinite(low) || !Number.isFinite(high)) {
-    throw new Error("Thresholds must be finite numbers");
+    throw new Error("Thresholds must be numbers");
   }
 
   if (low < 0 || low > 1) {
@@ -118,8 +118,10 @@ export function getSuggestedAction(level: RiskLevel): string {
       return "Hold and require manual review";
     default:
       // Exhaustiveness check
-      const exhaustive: never = level;
-      throw new Error(`Unknown risk level: ${exhaustive}`);
+      {
+        const exhaustive: never = level;
+        throw new Error(`Unknown risk level: ${exhaustive}`);
+      }
   }
 }
 

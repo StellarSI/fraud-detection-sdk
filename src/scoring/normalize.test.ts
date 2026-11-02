@@ -135,12 +135,12 @@ describe("normalizeScoreWithRange", () => {
 
   it("falls back to unit clipping for degenerate range (max <= min)", () => {
     expect(normalizeScoreWithRange(50, 100, 100)).toBe(1);
-    expect(normalizeScoreWithRange(50, 100, 50)).toBe(0.5); // falls to normalizeScore(50)
+    expect(normalizeScoreWithRange(50, 100, 50)).toBe(1); // falls to normalizeScore(50) → clipped to 1
     expect(normalizeScoreWithRange(-10, 100, 50)).toBe(0); // falls to normalizeScore(-10)
   });
 
   it("falls back to unit clipping for non-finite bounds", () => {
-    expect(normalizeScoreWithRange(50, NaN, 100)).toBe(0.5);
+    expect(normalizeScoreWithRange(50, NaN, 100)).toBe(1); // falls to normalizeScore(50) → clipped to 1
     expect(normalizeScoreWithRange(Infinity, 0, 100)).toBe(1);
   });
 

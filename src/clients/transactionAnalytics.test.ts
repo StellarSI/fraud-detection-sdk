@@ -38,7 +38,7 @@ function clientFor(fetchImpl: ReturnType<typeof vi.fn>, options = {}): Transacti
   });
 }
 
-const ADDRESS = "GABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJKLMNOPQRSTUVWXYZABCDEF";
+const ADDRESS = "GABCDEFGHIJKLMNOPQRSTUVWXYZ234567ABCDEFGHIJKLMNOPQRSTUVW";
 
 const accountFixture = {
   account_id: ADDRESS,

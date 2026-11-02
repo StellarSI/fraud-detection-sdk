@@ -5,13 +5,13 @@
  * Integration tests would require a live Horizon endpoint.
  */
 
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 import { FraudDetector, DefaultHorizonClient, ValidationError, HorizonError, DetectorConfigError } from "./FraudDetector.js";
 import { ScoreResult, Signal, RiskLevel } from "./types.js";
 
 // --- Test fixtures ---
 
-const VALID_ACCOUNT = "GABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJKLMNOPQRSTUVWXYZABCDEF";
+const VALID_ACCOUNT = "GABCDEFGHIJKLMNOPQRSTUVWXYZ234567ABCDEFGHIJKLMNOPQRSTUVW";
 const MOCK_ACCOUNT_RESPONSE = {
   id: VALID_ACCOUNT,
   sequence: "123456",
@@ -130,7 +130,7 @@ describe("FraudDetector.scoreAccount", () => {
   });
 
   it("returns a ScoreResult with correct shape", async () => {
-    const result = await detector.scoreAccount("GABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJKLMNOPQRSTUVWXYZABCDEF");
+    const result = await detector.scoreAccount(VALID_ACCOUNT);
 
     expect(result).toHaveProperty("score");
     expect(result).toHaveProperty("level");
@@ -141,13 +141,13 @@ describe("FraudDetector.scoreAccount", () => {
   });
 
   it("returns score in [0, 1]", async () => {
-    const result = await detector.scoreAccount("GABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJKLMNOPQRSTUVWXYZABCDEF");
+    const result = await detector.scoreAccount(VALID_ACCOUNT);
     expect(result.score).toBeGreaterThanOrEqual(0);
     expect(result.score).toBeLessThanOrEqual(1);
   });
 
   it("returns valid risk level", async () => {
-    const result = await detector.scoreAccount("GABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJKLMNOPQRSTUVWXYZABCDEF");
+    const result = await detector.scoreAccount(VALID_ACCOUNT);
     expect(["low", "medium", "high"]).toContain(result.level);
   });
 
@@ -158,7 +158,7 @@ describe("FraudDetector.scoreAccount", () => {
       transactions: Array(200).fill(0).map((_, i) => ({
         id: `tx${i}`,
         created_at: "2024-01-15T10:00:00Z",
-        source_account: "GABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJKLMNOPQRSTUVWXYZABCDEF",
+        source_account: VALID_ACCOUNT,
         type: "payment",
         amount: "10.0000000",
         asset_code: "USDC",
@@ -167,7 +167,7 @@ describe("FraudDetector.scoreAccount", () => {
     });
 
     const detector = new FraudDetector({ network: "testnet", horizonClient: mockClient });
-    const result = await detector.scoreAccount("GABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJKLMNOPQRSTUVWXYZABCDEF");
+    const result = await detector.scoreAccount(VALID_ACCOUNT);
 
     expect(result.signals.length).toBeGreaterThan(0);
     expect(result.signals.some((s) => s.id === "rapid-fan-out")).toBe(true);
@@ -188,8 +188,8 @@ describe("FraudDetector.scoreAccount", () => {
     const detector = new FraudDetector({ network: "testnet", horizonClient: mockClient });
 
     await expect(
-      detector.scoreAccount("GABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJKLMNOPQRSTUVWXYZABCDEF")
-    ).rejects.toThrow("HorizonError");
+      detector.scoreAccount(VALID_ACCOUNT)
+    ).rejects.toThrow("Horizon error");
   });
 
   it("maps Horizon 500 to recoverable HorizonError", async () => {
@@ -197,8 +197,8 @@ describe("FraudDetector.scoreAccount", () => {
     const detector = new FraudDetector({ network: "testnet", horizonClient: mockClient });
 
     await expect(
-      detector.scoreAccount("GABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJKLMNOPQRSTUVWXYZABCDEF")
-    ).rejects.toThrow("HorizonError");
+      detector.scoreAccount(VALID_ACCOUNT)
+    ).rejects.toThrow("Horizon error");
   });
 
   it("maps network errors to HorizonError with recoverable=true", async () => {
@@ -209,12 +209,12 @@ describe("FraudDetector.scoreAccount", () => {
     const detector = new FraudDetector({ network: "testnet", horizonClient: mockClient });
 
     await expect(
-      detector.scoreAccount("GABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJKLMNOPQRSTUVWXYZABCDEF")
-    ).rejects.toThrow("HorizonError");
+      detector.scoreAccount(VALID_ACCOUNT)
+    ).rejects.toThrow("Network error");
   });
 
   it("returns signals with correct shape", async () => {
-    const result = await detector.scoreAccount("GABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJKLMNOPQRSTUVWXYZABCDEF");
+    const result = await detector.scoreAccount(VALID_ACCOUNT);
 
     for (const signal of result.signals) {
       expect(signal).toHaveProperty("id");
@@ -227,7 +227,7 @@ describe("FraudDetector.scoreAccount", () => {
   });
 
   it("score is always in [0, 1]", async () => {
-    const result = await detector.scoreAccount("GABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJKLMNOPQRSTUVWXYZABCDEF");
+    const result = await detector.scoreAccount(VALID_ACCOUNT);
     expect(result.score).toBeGreaterThanOrEqual(0);
     expect(result.score).toBeLessThanOrEqual(1);
   });
@@ -238,7 +238,7 @@ describe("FraudDetector.scoreAccount", () => {
       transactions: Array(5000).fill(0).map((_, i) => ({
         id: `tx${i}`,
         created_at: "2024-01-15T10:00:00Z",
-        source_account: "GABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJKLMNOPQRSTUVWXYZABCDEF",
+        source_account: VALID_ACCOUNT,
         type: "payment",
         amount: "10.0000000",
         asset_code: "USDC",
@@ -247,7 +247,7 @@ describe("FraudDetector.scoreAccount", () => {
     });
 
     const detector = new FraudDetector({ network: "testnet", horizonClient: mockClient });
-    const result = await detector.scoreAccount("GABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJKLMNOPQRSTUVWXYZABCDEF");
+    const result = await detector.scoreAccount(VALID_ACCOUNT);
 
     if (result.score >= 0.7) {
       expect(result.level).toBe("high");
@@ -263,7 +263,7 @@ describe("FraudDetector.scoreAccount", () => {
       transactions: Array(100).fill(0).map((_, i) => ({
         id: `tx${i}`,
         created_at: "2024-01-15T10:00:00Z",
-        source_account: "GABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJKLMNOPQRSTUVWXYZABCDEF",
+        source_account: VALID_ACCOUNT,
         type: "payment",
         amount: "10.0000000",
         asset_code: "USDC",
@@ -277,7 +277,7 @@ describe("FraudDetector.scoreAccount", () => {
       horizonClient: mockClient,
       thresholds: { low: 0.3, high: 0.8 },
     });
-    const result = await detector.scoreAccount("GABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJKLMNOPQRSTUVWXYZABCDEF");
+    const result = await detector.scoreAccount(VALID_ACCOUNT);
 
     // With custom thresholds, the level should be classified differently
     if (result.score < 0.3) {
