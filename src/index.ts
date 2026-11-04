@@ -64,6 +64,19 @@ export {
   type RetryOptions,
 } from "./clients/http.js";
 export {
+  HTTP_STATUS_ERROR_RULES,
+  extractUpstreamDetail,
+  mapHttpResponseToError,
+  parseRetryAfterMs,
+  resolveHttpStatusRule,
+} from "./clients/errorMapping.js";
+export type {
+  HttpErrorKind,
+  HttpStatusRule,
+  MapHttpErrorOptions,
+} from "./clients/errorMapping.js";
+export type { UpstreamErrorDetail } from "./errors.js";
+export {
   TransactionAnalyticsClient,
   createTransactionAnalyticsClient,
   normalizeTransactionAnalyticsAccount,
