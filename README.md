@@ -121,6 +121,9 @@ The SDK consists of these core modules:
 | `clients/horizon` | Horizon REST client with retry and pagination |
 | `clients/http` | Retry wrapper with exponential backoff |
 | `clients/transactionAnalytics` | transaction-analytics-api adapter (DataSource) |
+| `clients/errorMapping` | Shared HTTP status → SDK error mapping |
+| `features/velocity` | Velocity features over configurable time windows |
+| `features/graph` | Bounded counterparty graph, degree, clustering, reachability |
 | `scoring/normalize` | Score normalization and clipping |
 | `scoring/levels` | Risk-level classification and thresholds |
 | `scoring/aggregate` | Signal aggregation and scoring |
@@ -129,6 +132,20 @@ The SDK consists of these core modules:
 | `types` | Public type definitions |
 
 See [docs/architecture.md](docs/architecture.md) for the full architectural overview.
+
+### Feature extraction
+
+Feature families expose pure, registry-ready providers (`src/features/types.ts`):
+
+- `extractVelocityFeatures` / `createVelocityFeatureProvider` — windowed
+  transaction counts, transactions per ledger, and unique counterparties.
+- `buildCounterpartyGraph` / `extractGraphFeatures` /
+  `createGraphFeatureProvider` — a bounded directed counterparty graph with
+  degree, local clustering, and reachability features.
+
+Providers return a flat `FeatureMap` so detectors, models, and the future
+registry consume one representation. Velocity window sizes and graph node/edge
+bounds are configurable so large histories stay within memory.
 
 ---
 
