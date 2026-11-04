@@ -17,12 +17,36 @@
  *   `FraudDetectorError` covers the whole taxonomy.
  */
 
+/**
+ * Vendor detail preserved from a failed upstream HTTP response (#18).
+ *
+ * Consumers can display the upstream message or quote a request id when
+ * contacting support, while the SDK's own `message` stays friendly and
+ * free of internal jargon.
+ */
+export interface UpstreamErrorDetail {
+  /** HTTP status returned by the upstream service. */
+  readonly status: number;
+  /** HTTP reason phrase, when the transport reports one. */
+  readonly statusText?: string;
+  /** Request URL, when known. */
+  readonly url?: string;
+  /** Upstream-provided human-readable message (title/detail/message). */
+  readonly message?: string;
+  /** Upstream request id (body field or `x-request-id` header). */
+  readonly requestId?: string;
+  /** Parsed response body, when it could be read. */
+  readonly body?: unknown;
+}
+
 /** Options shared by all concrete taxonomy constructors. */
 export interface FraudDetectorErrorOptions {
   /** The underlying error that triggered this one (for debugging). */
   cause?: unknown;
   /** Whether the caller can reasonably retry the failed operation. */
   recoverable?: boolean;
+  /** Structured detail preserved from a failed upstream response (#18). */
+  upstreamDetail?: UpstreamErrorDetail;
 }
 
 /**
@@ -40,6 +64,11 @@ export class FraudDetectorError extends Error {
   code: string;
   /** Whether the failed operation can reasonably be retried. */
   readonly recoverable: boolean;
+  /**
+   * Structured detail preserved from a failed upstream response (#18):
+   * status, upstream message, request id, and the parsed body.
+   */
+  readonly upstreamDetail?: UpstreamErrorDetail;
 
   constructor(
     message: string,
@@ -50,6 +79,9 @@ export class FraudDetectorError extends Error {
     this.name = "FraudDetectorError";
     this.code = code;
     this.recoverable = options.recoverable ?? false;
+    if (options.upstreamDetail !== undefined) {
+      this.upstreamDetail = options.upstreamDetail;
+    }
   }
 }
 
