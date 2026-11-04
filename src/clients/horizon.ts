@@ -20,12 +20,11 @@
 
 import {
   NetworkError,
-  NotFoundError,
-  RateLimitError,
   UpstreamError,
   ValidationError,
   type FraudDetectorErrorOptions,
 } from "../errors.js";
+import { mapHttpResponseToError } from "./errorMapping.js";
 
 /* ------------------------------------------------------------------ */
 /* Normalized account shape                                            */
@@ -560,11 +559,14 @@ export class HorizonRestClient {
    * Retried: {@link NetworkError} (unreachable / aborted), HTTP 429 and
    * 5xx. Non-retriable failures (404, other 4xx) throw immediately.
    */
-  private async getWithRetry(url: string, signal?: AbortSignal): Promise<Response> {
+  private async getWithRetry(
+    url: string,
+    context: { signal?: AbortSignal; resourceId?: string } = {}
+  ): Promise<Response> {
     let lastError: unknown;
     for (let attempt = 0; attempt <= this.maxRetries; attempt++) {
       try {
-        return await this.getOnce(url, signal);
+        return await this.getOnce(url, context);
       } catch (error) {
         if (!(error instanceof Error) || !("recoverable" in error)) {
           throw error; // Non-taxonomy failures are programming errors.
@@ -572,7 +574,7 @@ export class HorizonRestClient {
         if (!(error as { recoverable?: boolean }).recoverable) {
           throw error; // e.g. NotFoundError — never retriable.
         }
-        if (signal?.aborted) {
+        if (context.signal?.aborted) {
           throw error;
         }
         lastError = error;
@@ -606,12 +608,15 @@ export class HorizonRestClient {
   }
 
   /** Aborts the in-flight request when the configured timeout elapses. */
-  private async getOnce(url: string, outerSignal?: AbortSignal): Promise<Response> {
+  private async getOnce(
+    url: string,
+    context: { signal?: AbortSignal; resourceId?: string } = {}
+  ): Promise<Response> {
     const controller = new AbortController();
     // Propagate caller cancellation if one is supplied (unused today,
     // but keeps the wrapper reusable for streaming, #55).
-    if (outerSignal) {
-      outerSignal.addEventListener("abort", () => controller.abort(), { once: true });
+    if (context.signal) {
+      context.signal.addEventListener("abort", () => controller.abort(), { once: true });
     }
     const timer = setTimeout(() => controller.abort(), this.timeoutMs);
     let response: Response;
@@ -633,48 +638,15 @@ export class HorizonRestClient {
     }
     clearTimeout(timer);
     if (!response.ok) {
-      throw this.toTaxonomyError(response);
-    }
-    return response;
-  }
-
-  /** Maps a failed Horizon HTTP response onto the taxonomy (#9). */
-  private toTaxonomyError(response: Response): Error {
-    const status = response.status;
-    const retryAfterMs = this.parseRetryAfterMs(response);
-    if (status === 404) {
-      throw new NotFoundError(
-        "Account not found on this network. It may not exist, or you may be querying the wrong network.",
-        { recoverable: false }
-      );
-    }
-    if (status === 429) {
-      throw new RateLimitError(
-        "Horizon rate limit reached; slow down and retry later.",
-        { retryAfterMs }
-      );
-    }
-    if (status >= 500) {
-      throw new UpstreamError(`Horizon internal error (HTTP ${status})`, {
-        upstreamStatus: status,
-        recoverable: true,
-        cause: { status },
+      // Shared, data-driven mapping (#18): 404/410 -> NotFoundError,
+      // 408 -> NetworkError, 429 -> RateLimitError, 5xx -> recoverable
+      // UpstreamError. Upstream message/request id stay on the error.
+      throw await mapHttpResponseToError(response, {
+        serviceName: "Horizon",
+        resourceId: context.resourceId,
       });
     }
-    throw new UpstreamError(`Horizon rejected the request (HTTP ${status})`, {
-      upstreamStatus: status,
-      cause: { status },
-    });
-  }
-
-  /** Reads `Retry-After` (seconds) into milliseconds when present. */
-  private parseRetryAfterMs(response: Response): number | undefined {
-    const raw = response.headers?.get?.("retry-after");
-    if (raw == null || raw.length === 0) {
-      return undefined;
-    }
-    const seconds = Number(raw);
-    return Number.isFinite(seconds) && seconds > 0 ? Math.round(seconds * 1000) : undefined;
+    return response;
   }
 
   private delay(ms: number): Promise<void> {
@@ -696,7 +668,9 @@ export class HorizonRestClient {
    */
   async getAccount(address: string): Promise<Account> {
     validateAccountId(address);
-    const response = await this.getWithRetry(`${this.baseUrl}/accounts/${address}`);
+    const response = await this.getWithRetry(`${this.baseUrl}/accounts/${address}`, {
+      resourceId: address,
+    });
     const raw = (await response.json()) as RawHorizonAccount;
     if (raw?.account_id !== address) {
       throw new UpstreamError("Horizon returned an account that does not match the request", {
@@ -738,7 +712,7 @@ export class HorizonRestClient {
         // first request instead uses the caller's starting cursor (#13).
         const effectiveCursor = cursor ?? options.cursor;
         const url = this.buildTransactionsUrl(address, effectiveCursor, options);
-        const response = await this.getWithRetry(url);
+        const response = await this.getWithRetry(url, { resourceId: address });
         const body = (await response.json()) as RawHorizonCollection;
         const records = (body._embedded?.records ?? []).map(normalizeTransaction);
         const nextCursor = this.extractNextCursor(body, records);

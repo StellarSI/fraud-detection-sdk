@@ -14,11 +14,9 @@ import {
   ConfigError as TaxonomyConfigError,
   FraudDetectorError,
   NetworkError,
-  NotFoundError,
-  RateLimitError,
-  UpstreamError,
   ValidationError,
 } from "./errors.js";
+import { mapHttpResponseToError } from "./clients/errorMapping.js";
 
 /**
  * Horizon API response types.
@@ -111,47 +109,11 @@ export class DefaultHorizonClient implements HorizonClient {
       );
     }
     if (!response.ok) {
-      throw this.toTaxonomyError(response);
+      // Shared taxonomy mapping (#18) so HTTP 404/410, 408, 429, and 5xx
+      // failures surface as the same SDK errors used by the REST client.
+      throw await mapHttpResponseToError(response, { serviceName: "Horizon" });
     }
     return response;
-  }
-
-  /** Maps a failed Horizon HTTP response to a taxonomy error. */
-  private toTaxonomyError(response: Response): FraudDetectorError {
-    const status = response.status;
-
-    if (status === 404) {
-      return new NotFoundError(
-        "The requested account or resource could not be found. It may not exist on this network."
-      );
-    }
-
-    if (status === 429) {
-      return new RateLimitError(
-        "Horizon is receiving too many requests. Please wait a moment and try again.",
-        { retryAfterMs: this.parseRetryAfterMs(response) }
-      );
-    }
-
-    if (status >= 500) {
-      return new UpstreamError(
-        "Horizon is having a temporary problem on its side. Please try again soon.",
-        { upstreamStatus: status, recoverable: true }
-      );
-    }
-
-    return new UpstreamError(
-      `Horizon could not process this request (HTTP ${status} ${response.statusText}). Double-check the account ID and options, then try again.`,
-      { upstreamStatus: status }
-    );
-  }
-
-  /** Reads `Retry-After` (seconds) when the response exposes headers. */
-  private parseRetryAfterMs(response: Response): number | undefined {
-    const raw = (response.headers as { get?: (name: string) => string | null } | undefined)
-      ?.get?.("retry-after");
-    const seconds = raw === null ? Number.NaN : Number(raw);
-    return Number.isFinite(seconds) && seconds > 0 ? Math.round(seconds * 1000) : undefined;
   }
 
   async getAccount(accountId: string) {

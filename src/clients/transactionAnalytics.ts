@@ -18,13 +18,8 @@ import {
   Transaction,
   type Page,
 } from "./horizon.js";
-import {
-  NetworkError,
-  NotFoundError,
-  RateLimitError,
-  UpstreamError,
-  ValidationError,
-} from "../errors.js";
+import { NetworkError, ValidationError } from "../errors.js";
+import { mapHttpResponseToError } from "./errorMapping.js";
 
 /** Raw shape of transaction-analytics-api account insights (subset). */
 interface RawTransactionAnalyticsAccount {
@@ -205,46 +200,6 @@ export function normalizeTransactionAnalyticsFlow(raw: RawTransactionAnalyticsFl
 }
 
 /**
- * Maps a failed transaction-analytics-api HTTP response onto the SDK
- * taxonomy (#9).
- */
-function toTaxonomyError(response: Response): Error {
-  const status = response.status;
-  const retryAfterMs = parseRetryAfterMs(response.headers.get("retry-after"));
-
-  if (status === 404) {
-    throw new NotFoundError(
-      "Account not found on transaction-analytics-api.",
-      { recoverable: false }
-    );
-  }
-  if (status === 429) {
-    throw new RateLimitError(
-      "transaction-analytics-api rate limit reached; slow down and retry later.",
-      { retryAfterMs }
-    );
-  }
-  if (status >= 500) {
-    throw new UpstreamError(`transaction-analytics-api internal error (HTTP ${status})`, {
-      upstreamStatus: status,
-      recoverable: true,
-      cause: { status },
-    });
-  }
-  throw new UpstreamError(`transaction-analytics-api rejected the request (HTTP ${status})`, {
-    upstreamStatus: status,
-    cause: { status },
-  });
-}
-
-/** Reads `Retry-After` (seconds) into milliseconds when present. */
-function parseRetryAfterMs(value: string | null): number | undefined {
-  if (value == null || value.length === 0) return undefined;
-  const seconds = Number(value);
-  return Number.isFinite(seconds) && seconds > 0 ? Math.round(seconds * 1000) : undefined;
-}
-
-/**
  * Validates a Stellar account ID (G... format) before any network call.
  */
 export function validateAccountId(address: string): void {
@@ -298,11 +253,11 @@ export class TransactionAnalyticsClient implements DataSource {
   }
 
   /** Performs a GET against transaction-analytics-api with timeout and retries. */
-  private async getWithRetry(url: string): Promise<Response> {
+  private async getWithRetry(url: string, resourceId?: string): Promise<Response> {
     let lastError: unknown;
     for (let attempt = 0; attempt <= this.maxRetries; attempt++) {
       try {
-        return await this.getOnce(url);
+        return await this.getOnce(url, resourceId);
       } catch (error) {
         if (!(error instanceof Error) || !("recoverable" in error)) {
           throw error;
@@ -332,7 +287,7 @@ export class TransactionAnalyticsClient implements DataSource {
     return Math.round(Math.random() * base * 0.1);
   }
 
-  private async getOnce(url: string): Promise<Response> {
+  private async getOnce(url: string, resourceId?: string): Promise<Response> {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), this.timeoutMs);
     let response: Response;
@@ -354,7 +309,12 @@ export class TransactionAnalyticsClient implements DataSource {
     }
     clearTimeout(timer);
     if (!response.ok) {
-      throw toTaxonomyError(response);
+      // Same taxonomy mapping as Horizon (#18), so callers catch
+      // NotFoundError/RateLimitError/UpstreamError regardless of source.
+      throw await mapHttpResponseToError(response, {
+        serviceName: "transaction-analytics-api",
+        resourceId,
+      });
     }
     return response;
   }
@@ -366,7 +326,10 @@ export class TransactionAnalyticsClient implements DataSource {
   /** {@inheritDoc DataSource.getAccount} */
   async getAccount(address: string): Promise<Account> {
     validateAccountId(address);
-    const response = await this.getWithRetry(`${this.baseUrl}/accounts/${address}`);
+    const response = await this.getWithRetry(
+      `${this.baseUrl}/accounts/${address}`,
+      address
+    );
     const raw = (await response.json()) as RawTransactionAnalyticsAccount;
     return normalizeTransactionAnalyticsAccount(raw);
   }
@@ -420,7 +383,7 @@ export class TransactionAnalyticsClient implements DataSource {
     if (options.endTime) params.set("end_time", options.endTime);
 
     const url = `${this.baseUrl}/accounts/${address}/flows?${params.toString()}`;
-    const response = await this.getWithRetry(url);
+    const response = await this.getWithRetry(url, address);
     const body = (await response.json()) as RawTransactionAnalyticsCollection;
     const records = (body.records ?? []).map(normalizeTransactionAnalyticsFlow);
     return {
