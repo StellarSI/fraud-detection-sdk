@@ -82,3 +82,20 @@ export type {
   HorizonRestClientOptions,
 } from "./clients/horizon.js";
 export type { DataSource } from "./clients/transactionAnalytics.js";
+export {
+  DEFAULT_VELOCITY_WINDOWS,
+  extractVelocityFeatures,
+  velocityFeaturesToFeatureMap,
+  createVelocityFeatureProvider,
+} from "./features/velocity.js";
+export type {
+  VelocityFeatures,
+  VelocityOptions,
+  VelocityWindow,
+} from "./features/velocity.js";
+export type {
+  FeatureContext,
+  FeatureMap,
+  FeatureProvider,
+  FeatureValue,
+} from "./features/types.js";
