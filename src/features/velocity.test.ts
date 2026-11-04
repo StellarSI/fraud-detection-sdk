@@ -110,6 +110,7 @@ describe("extractVelocityFeatures", () => {
 
     const features = extractVelocityFeatures(transactions, {
       now: REFERENCE,
+      accountId: ACCOUNT,
       windows: [
         { name: "15m", durationMs: 15 * 60_000 },
         { name: "7d", durationMs: 7 * 24 * 60 * 60_000 },
