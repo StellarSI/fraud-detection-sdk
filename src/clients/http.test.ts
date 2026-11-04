@@ -132,7 +132,7 @@ describe("fetchWithRetry", () => {
   it("honors Retry-After on 429", async () => {
     const fetchImpl = vi
       .fn()
-      .mockResolvedValueOnce(jsonResponse({}, 429, { "retry-after": "50" }))
+      .mockResolvedValueOnce(jsonResponse({}, 429, { "retry-after": "1" }))
       .mockResolvedValueOnce(jsonResponse({ ok: true }, 200));
     vi.stubGlobal("fetch", fetchImpl);
     const res = await fetchWithRetry("https://example.org/data", undefined, { retries: 2, baseDelay: 1, maxDelay: 10 });
