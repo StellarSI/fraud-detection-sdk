@@ -19,7 +19,13 @@ export {
   isFraudDetectorError,
   ERROR_CODES,
 } from "./errors.js";
-export { NetworkPreset, NETWORK_PRESETS, getNetworkPreset, isSupportedNetwork } from "./network.js";
+export {
+  NetworkPreset,
+  NETWORK_PRESETS,
+  getNetworkPreset,
+  isSupportedNetwork,
+  resolveHorizonUrl,
+} from "./network.js";
 export { normalizeScore, normalizeScoreWithRange, clipToUnitInterval, roundToPrecision, DEFAULT_SCORE_PRECISION } from "./scoring/normalize.js";
 export { classifyLevel, classify, getSuggestedAction, validateThresholds, DEFAULT_THRESHOLDS } from "./scoring/levels.js";
 export { aggregate, compareSignals } from "./scoring/aggregate.js";
