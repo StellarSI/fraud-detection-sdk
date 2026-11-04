@@ -99,3 +99,18 @@ export type {
   FeatureProvider,
   FeatureValue,
 } from "./features/types.js";
+export {
+  CounterpartyGraph,
+  DEFAULT_MAX_GRAPH_NODES,
+  DEFAULT_MAX_GRAPH_EDGES,
+  DEFAULT_MAX_CLUSTERING_DEGREE,
+  buildCounterpartyGraph,
+  extractGraphFeatures,
+  graphFeaturesToFeatureMap,
+  createGraphFeatureProvider,
+} from "./features/graph.js";
+export type {
+  CounterpartyGraphOptions,
+  GraphFeatureOptions,
+  GraphFeatures,
+} from "./features/graph.js";

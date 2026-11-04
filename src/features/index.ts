@@ -24,3 +24,19 @@ export type {
   VelocityOptions,
   VelocityWindow,
 } from "./velocity.js";
+
+export {
+  CounterpartyGraph,
+  DEFAULT_MAX_GRAPH_NODES,
+  DEFAULT_MAX_GRAPH_EDGES,
+  DEFAULT_MAX_CLUSTERING_DEGREE,
+  buildCounterpartyGraph,
+  extractGraphFeatures,
+  graphFeaturesToFeatureMap,
+  createGraphFeatureProvider,
+} from "./graph.js";
+export type {
+  CounterpartyGraphOptions,
+  GraphFeatureOptions,
+  GraphFeatures,
+} from "./graph.js";
