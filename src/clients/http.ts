@@ -14,10 +14,8 @@
  * wrapper (#14 references this module as its retry layer).
  */
 
-import {
-  NetworkError,
-  UpstreamError,
-} from "../errors.js";
+import { NetworkError } from "../errors.js";
+import { mapHttpResponseToError } from "./errorMapping.js";
 
 /** Options for {@link withRetry}. */
 export interface RetryOptions {
@@ -29,16 +27,6 @@ export interface RetryOptions {
   maxDelay?: number;
   /** Set to true to disable all retries (useful for tests). Default: false. */
   noRetry?: boolean;
-}
-
-/** Transient HTTP status codes that warrant a retry. */
-const RETRIABLE_STATUS_CODES = new Set([429, 500, 502, 503, 504]);
-
-/** Parses Retry-After header value into milliseconds. */
-function parseRetryAfterMs(value: string | null): number | undefined {
-  if (value == null || value.length === 0) return undefined;
-  const seconds = Number(value);
-  return Number.isFinite(seconds) && seconds > 0 ? Math.round(seconds * 1000) : undefined;
 }
 
 /**
@@ -162,26 +150,11 @@ export async function fetchWithRetry(
 
     if (response.ok) return response;
 
-    const status = response.status;
-    const retryAfterMs = parseRetryAfterMs(response.headers.get("retry-after"));
-
-    if (status === 404) {
-      throw new UpstreamError(`Resource not found at ${url} (HTTP 404)`, {
-        upstreamStatus: status,
-        recoverable: false,
-      });
-    }
-    if (RETRIABLE_STATUS_CODES.has(status)) {
-      throw new UpstreamError(`Upstream returned HTTP ${status}`, {
-        upstreamStatus: status,
-        recoverable: true,
-        cause: { status, retryAfterMs },
-      });
-    }
-    // Other 4xx: permanent client error, never retry
-    throw new UpstreamError(`Upstream rejected the request (HTTP ${status})`, {
-      upstreamStatus: status,
-      recoverable: false,
+    // One shared mapping (#18): 404/410 -> NotFoundError, 408 ->
+    // NetworkError, 429 -> RateLimitError, 5xx -> recoverable
+    // UpstreamError, other 4xx -> permanent UpstreamError.
+    throw await mapHttpResponseToError(response, {
+      serviceName: "The upstream service",
     });
   }, retryOptions);
 }

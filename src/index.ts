@@ -19,7 +19,13 @@ export {
   isFraudDetectorError,
   ERROR_CODES,
 } from "./errors.js";
-export { NetworkPreset, NETWORK_PRESETS, getNetworkPreset, isSupportedNetwork } from "./network.js";
+export {
+  NetworkPreset,
+  NETWORK_PRESETS,
+  getNetworkPreset,
+  isSupportedNetwork,
+  resolveHorizonUrl,
+} from "./network.js";
 export { normalizeScore, normalizeScoreWithRange, clipToUnitInterval, roundToPrecision, DEFAULT_SCORE_PRECISION } from "./scoring/normalize.js";
 export { classifyLevel, classify, getSuggestedAction, validateThresholds, DEFAULT_THRESHOLDS } from "./scoring/levels.js";
 export { aggregate, compareSignals } from "./scoring/aggregate.js";
@@ -58,6 +64,19 @@ export {
   type RetryOptions,
 } from "./clients/http.js";
 export {
+  HTTP_STATUS_ERROR_RULES,
+  extractUpstreamDetail,
+  mapHttpResponseToError,
+  parseRetryAfterMs,
+  resolveHttpStatusRule,
+} from "./clients/errorMapping.js";
+export type {
+  HttpErrorKind,
+  HttpStatusRule,
+  MapHttpErrorOptions,
+} from "./clients/errorMapping.js";
+export type { UpstreamErrorDetail } from "./errors.js";
+export {
   TransactionAnalyticsClient,
   createTransactionAnalyticsClient,
   normalizeTransactionAnalyticsAccount,
@@ -76,3 +95,35 @@ export type {
   HorizonRestClientOptions,
 } from "./clients/horizon.js";
 export type { DataSource } from "./clients/transactionAnalytics.js";
+export {
+  DEFAULT_VELOCITY_WINDOWS,
+  extractVelocityFeatures,
+  velocityFeaturesToFeatureMap,
+  createVelocityFeatureProvider,
+} from "./features/velocity.js";
+export type {
+  VelocityFeatures,
+  VelocityOptions,
+  VelocityWindow,
+} from "./features/velocity.js";
+export type {
+  FeatureContext,
+  FeatureMap,
+  FeatureProvider,
+  FeatureValue,
+} from "./features/types.js";
+export {
+  CounterpartyGraph,
+  DEFAULT_MAX_GRAPH_NODES,
+  DEFAULT_MAX_GRAPH_EDGES,
+  DEFAULT_MAX_CLUSTERING_DEGREE,
+  buildCounterpartyGraph,
+  extractGraphFeatures,
+  graphFeaturesToFeatureMap,
+  createGraphFeatureProvider,
+} from "./features/graph.js";
+export type {
+  CounterpartyGraphOptions,
+  GraphFeatureOptions,
+  GraphFeatures,
+} from "./features/graph.js";

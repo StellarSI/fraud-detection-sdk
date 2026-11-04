@@ -8,7 +8,9 @@ import {
   NETWORK_PRESETS,
   getNetworkPreset,
   isSupportedNetwork,
+  resolveHorizonUrl,
 } from "./network.js";
+import { ValidationError } from "./errors.js";
 
 describe("SUPPORTED_NETWORKS", () => {
   it("contains exactly testnet and mainnet", () => {
@@ -73,5 +75,63 @@ describe("isSupportedNetwork", () => {
     expect(isSupportedNetwork("invalid")).toBe(false);
     expect(isSupportedNetwork("")).toBe(false);
     expect(isSupportedNetwork("test")).toBe(false);
+  });
+});
+
+describe("unknown network errors (issue #17)", () => {
+  it("throws a ValidationError listing every supported network", () => {
+    let error: unknown;
+    try {
+      getNetworkPreset("futurenet");
+    } catch (caught) {
+      error = caught;
+    }
+
+    expect(error).toBeInstanceOf(ValidationError);
+    const message = (error as Error).message;
+    expect(message).toContain('Unsupported network "futurenet"');
+    for (const network of SUPPORTED_NETWORKS) {
+      expect(message).toContain(network);
+    }
+    expect(message).toContain("horizonUrl");
+  });
+
+  it("is case-sensitive so a typo is not silently accepted", () => {
+    expect(() => getNetworkPreset("Testnet")).toThrow(ValidationError);
+  });
+
+  it("lists the valid options for empty and non-string input", () => {
+    expect(() => getNetworkPreset("")).toThrow("testnet, mainnet");
+    expect(() => getNetworkPreset(undefined as unknown as string)).toThrow(
+      "testnet, mainnet"
+    );
+  });
+});
+
+describe("resolveHorizonUrl (issue #17)", () => {
+  it("returns the preset URL when no override is supplied", () => {
+    expect(resolveHorizonUrl("testnet")).toBe("https://horizon-testnet.stellar.org");
+    expect(resolveHorizonUrl("mainnet")).toBe("https://horizon.stellar.org");
+  });
+
+  it("lets a custom horizonUrl override the preset", () => {
+    expect(resolveHorizonUrl("mainnet", "https://horizon.internal.example")).toBe(
+      "https://horizon.internal.example"
+    );
+  });
+
+  it("trims whitespace around an override and ignores blank overrides", () => {
+    expect(resolveHorizonUrl("testnet", "  https://horizon.internal.example  ")).toBe(
+      "https://horizon.internal.example"
+    );
+    expect(resolveHorizonUrl("testnet", "   ")).toBe(
+      "https://horizon-testnet.stellar.org"
+    );
+  });
+
+  it("rejects an unknown network even when an override is supplied", () => {
+    expect(() => resolveHorizonUrl("futurenet", "https://horizon.example")).toThrow(
+      ValidationError
+    );
   });
 });

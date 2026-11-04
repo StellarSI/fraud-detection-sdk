@@ -53,12 +53,21 @@ src/
   network.test.ts         # Network preset tests
   types.ts                # Public type definitions
   clients/
+    errorMapping.ts       # Shared HTTP status → SDK error mapping
+    errorMapping.test.ts  # Error mapping tests
     horizon.ts            # Horizon REST client (retry, pagination)
     horizon.test.ts       # Horizon client tests
     http.ts               # Retry wrapper (withRetry, fetchWithRetry)
     http.test.ts          # Retry wrapper tests
     transactionAnalytics.ts # transaction-analytics-api adapter (DataSource)
     transactionAnalytics.test.ts  # Adapter tests
+  features/
+    types.ts              # FeatureProvider / FeatureMap contracts
+    velocity.ts           # Velocity feature extraction
+    velocity.test.ts      # Velocity tests
+    graph.ts              # Bounded counterparty graph and features
+    graph.test.ts         # Graph tests
+    index.ts              # Feature family exports
   scoring/
     aggregate.ts          # Signal aggregation
     aggregate.test.ts     # Aggregation tests

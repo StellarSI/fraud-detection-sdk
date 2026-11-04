@@ -25,6 +25,29 @@ describe("resolveConfig", () => {
     expect(cfg.horizonUrl).toBe("https://custom-horizon.example.com");
   });
 
+  it("resolves the preset URL for each supported network", () => {
+    expect(resolveConfig({ network: "testnet" }).horizonUrl).toBe(
+      "https://horizon-testnet.stellar.org"
+    );
+    expect(resolveConfig({ network: "mainnet" }).horizonUrl).toBe(
+      "https://horizon.stellar.org"
+    );
+  });
+
+  it("trims a custom horizonUrl from environment-style input", () => {
+    const cfg = resolveConfig({
+      network: "testnet",
+      horizonUrl: "  https://horizon.internal.example  ",
+    });
+    expect(cfg.horizonUrl).toBe("https://horizon.internal.example");
+  });
+
+  it("reports unknown networks with the accepted values", () => {
+    expect(() => resolveConfig({ network: "futurenet" as NetworkPreset })).toThrow(
+      "testnet, mainnet"
+    );
+  });
+
   it("accepts injected horizonClient and ignores horizonUrl", () => {
     const mockClient = {
       getAccount: async () => {},

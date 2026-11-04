@@ -5,7 +5,13 @@
  * for misconfiguration (matches README.md quick-start).
  */
 
-import { NetworkPreset, NETWORK_PRESETS, SUPPORTED_NETWORKS } from "./network.js";
+import {
+  NetworkPreset,
+  SUPPORTED_NETWORKS,
+  getNetworkPreset,
+  isSupportedNetwork,
+  resolveHorizonUrl,
+} from "./network.js";
 import { ConfigError as TaxonomyConfigError } from "./errors.js";
 
 /**
@@ -114,9 +120,11 @@ export function resolveConfig(options: Partial<FraudDetectorOptions>): FraudDete
     );
   }
 
-  if (!SUPPORTED_NETWORKS.includes(network)) {
+  if (!isSupportedNetwork(network)) {
     throw new ConfigError(
-      `Unknown network "${network}". Supported networks: ${SUPPORTED_NETWORKS.join(", ")}`,
+      `Unknown network "${network}". Supported networks: ${SUPPORTED_NETWORKS.join(
+        ", "
+      )}. Use "testnet" for development or "mainnet" for production.`,
       "INVALID_NETWORK"
     );
   }
@@ -163,8 +171,11 @@ export function resolveConfig(options: Partial<FraudDetectorOptions>): FraudDete
   // network preset and skip validation.
   let horizonUrl = options.horizonUrl;
   if (!horizonUrl || options.horizonClient) {
-    horizonUrl = NETWORK_PRESETS[network].horizonUrl;
+    horizonUrl = getNetworkPreset(network).horizonUrl;
   } else {
+    // A custom horizonUrl overrides the preset; trim surrounding
+    // whitespace from environment-provided values before validating.
+    horizonUrl = resolveHorizonUrl(network, horizonUrl);
     // Validate URL format
     try {
       new URL(horizonUrl);
