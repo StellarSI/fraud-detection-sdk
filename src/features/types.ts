@@ -7,7 +7,7 @@
  * and models.
  */
 
-import type { Transaction } from "../clients/horizon.js";
+import type { Account, Transaction } from "../clients/horizon.js";
 
 /** A single scalar feature value in a merged feature map. */
 export type FeatureValue = number | string | boolean | null;
@@ -25,6 +25,8 @@ export type FeatureMap = Record<string, FeatureValue>;
 export interface FeatureContext {
   /** Account whose behavior is being described, when scoring one account. */
   readonly accountId?: string;
+  /** Normalized account being scored (issue #12), consumed by asset/lifecycle providers. */
+  readonly account?: Account;
   /** Normalized transaction history (see clients/horizon, issue #13). */
   readonly transactions: readonly Transaction[];
   /** Reference time for windowed features; defaults to the current time. */
