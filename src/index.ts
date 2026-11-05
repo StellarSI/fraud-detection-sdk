@@ -127,3 +127,31 @@ export type {
   GraphFeatureOptions,
   GraphFeatures,
 } from "./features/graph.js";
+export {
+  DEFAULT_TRUSTLINE_CHURN_WINDOW_MS,
+  NATIVE_ASSET_ID,
+  canonicalAssetId,
+  extractAssetFeatures,
+  assetFeaturesToFeatureMap,
+  createAssetFeatureProvider,
+} from "./features/assets.js";
+export type {
+  AssetFeatures,
+  AssetFeatureOptions,
+} from "./features/assets.js";
+export {
+  DEFAULT_MAX_MEMO_LENGTH,
+  MEMO_VARIANTS,
+  sanitizeMemo,
+  normalizeMemoType,
+  isValidMemoValue,
+  extractMemoFeatures,
+  memoFeaturesToFeatureMap,
+  createMemoFeatureProvider,
+} from "./features/memo.js";
+export type {
+  MemoFeatures,
+  MemoFeatureOptions,
+  MemoEntry,
+  MemoType,
+} from "./features/memo.js";

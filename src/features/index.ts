@@ -1,9 +1,9 @@
 /**
- * Feature extraction families (issues #19, #20).
+ * Feature extraction families (issues #19, #20, #21, #22).
  *
- * Re-exports the shared provider contracts plus the velocity and graph
- * implementations so the registry (#24) and SDK consumers can import
- * them from one place.
+ * Re-exports the shared provider contracts plus the velocity, graph,
+ * asset, and memo implementations so the registry (#24) and SDK
+ * consumers can import them from one place.
  */
 
 export type {
@@ -40,3 +40,33 @@ export type {
   GraphFeatureOptions,
   GraphFeatures,
 } from "./graph.js";
+
+export {
+  DEFAULT_TRUSTLINE_CHURN_WINDOW_MS,
+  NATIVE_ASSET_ID,
+  canonicalAssetId,
+  extractAssetFeatures,
+  assetFeaturesToFeatureMap,
+  createAssetFeatureProvider,
+} from "./assets.js";
+export type {
+  AssetFeatures,
+  AssetFeatureOptions,
+} from "./assets.js";
+
+export {
+  DEFAULT_MAX_MEMO_LENGTH,
+  MEMO_VARIANTS,
+  sanitizeMemo,
+  normalizeMemoType,
+  isValidMemoValue,
+  extractMemoFeatures,
+  memoFeaturesToFeatureMap,
+  createMemoFeatureProvider,
+} from "./memo.js";
+export type {
+  MemoFeatures,
+  MemoFeatureOptions,
+  MemoEntry,
+  MemoType,
+} from "./memo.js";
