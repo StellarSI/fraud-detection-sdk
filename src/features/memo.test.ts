@@ -298,15 +298,17 @@ describe("memoFeaturesToFeatureMap", () => {
       makeTx({ memo: "invoice-7", memoType: "text" }),
       makeTx({ memo: "invoice-7", memoType: "text" }),
       makeTx({ memo: "42", memoType: "id" }),
+      makeTx({ memo: "42", memoType: "id" }),
     ];
     const map = memoFeaturesToFeatureMap(extractMemoFeatures(transactions));
 
-    expect(map.memoTotalCount).toBe(3);
-    expect(map.memoPresentCount).toBe(3);
+    expect(map.memoTotalCount).toBe(4);
+    expect(map.memoPresentCount).toBe(4);
     expect(map.memoTextCount).toBe(2);
-    expect(map.memoIdCount).toBe(1);
+    expect(map.memoIdCount).toBe(2);
     expect(map.memoMaxReuseCount).toBe(2);
-    expect(map.memoMaxIdReuseCount).toBe(1);
+    expect(map.memoMaxIdReuseCount).toBe(2);
+    expect(map.memoReusedIdCount).toBe(1);
     expect(Object.values(map).every((value) => typeof value === "number")).toBe(true);
   });
 });
