@@ -127,3 +127,15 @@ export type {
   GraphFeatureOptions,
   GraphFeatures,
 } from "./features/graph.js";
+export {
+  DEFAULT_TRUSTLINE_CHURN_WINDOW_MS,
+  NATIVE_ASSET_ID,
+  canonicalAssetId,
+  extractAssetFeatures,
+  assetFeaturesToFeatureMap,
+  createAssetFeatureProvider,
+} from "./features/assets.js";
+export type {
+  AssetFeatures,
+  AssetFeatureOptions,
+} from "./features/assets.js";
