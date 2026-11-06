@@ -100,7 +100,7 @@ Horizon / transaction-analytics-api
               │
               ▼
       Feature extraction
-   (velocity, graph, asset, memo)
+   (velocity, graph, asset, memo, lifecycle)
               │
      ┌────────┼────────┐
      ▼        ▼        ▼
@@ -124,6 +124,9 @@ The SDK consists of these core modules:
 | `clients/errorMapping` | Shared HTTP status → SDK error mapping |
 | `features/velocity` | Velocity features over configurable time windows |
 | `features/graph` | Bounded counterparty graph, degree, clustering, reachability |
+| `features/asset` | Balance/trustline features and trustline churn |
+| `features/memo` | Memo hygiene: sanitization, type validation, reuse counts |
+| `features/lifecycle` | Account age, `create_account` funding, rapid-merge flags |
 | `scoring/normalize` | Score normalization and clipping |
 | `scoring/levels` | Risk-level classification and thresholds |
 | `scoring/aggregate` | Signal aggregation and scoring |
@@ -142,6 +145,10 @@ Feature families expose pure, registry-ready providers (`src/features/types.ts`)
 - `buildCounterpartyGraph` / `extractGraphFeatures` /
   `createGraphFeatureProvider` — a bounded directed counterparty graph with
   degree, local clustering, and reachability features.
+- `extractLifecycleFeatures` / `createLifecycleFeatureProvider` — account
+  age from creation/first-seen ledger data, `create_account` funding counts
+  in both directions, and a rapid-merge flag (first merge within 7 days of
+  creation/first-seen by default).
 
 Providers return a flat `FeatureMap` so detectors, models, and the future
 registry consume one representation. Velocity window sizes and graph node/edge

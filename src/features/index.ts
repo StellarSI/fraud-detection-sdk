@@ -1,9 +1,9 @@
 /**
- * Feature extraction families (issues #19, #20, #21, #22).
+ * Feature extraction families (issues #19, #20, #21, #22, #23).
  *
  * Re-exports the shared provider contracts plus the velocity, graph,
- * asset, and memo implementations so the registry (#24) and SDK
- * consumers can import them from one place.
+ * asset, memo, and lifecycle implementations so the registry (#24) and
+ * SDK consumers can import them from one place.
  */
 
 export type {
@@ -70,3 +70,14 @@ export type {
   MemoEntry,
   MemoType,
 } from "./memo.js";
+
+export {
+  DEFAULT_RAPID_MERGE_WINDOW_MS,
+  extractLifecycleFeatures,
+  lifecycleFeaturesToFeatureMap,
+  createLifecycleFeatureProvider,
+} from "./lifecycle.js";
+export type {
+  LifecycleFeatures,
+  LifecycleOptions,
+} from "./lifecycle.js";
