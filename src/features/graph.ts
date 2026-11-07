@@ -279,6 +279,88 @@ export class CounterpartyGraph {
     return round4((2 * links) / (list.length * (list.length - 1)));
   }
 
+  /**
+   * Returns true when the directed graph contains any cycle.
+   *
+   * Uses DFS with a recursion stack (path set) so back-edges that close a
+   * cycle are detected. This supports layering/ring detectors (e.g. path
+   * payment layering, #26; graph structures, #46) without requiring a
+   * separate graph implementation.
+   */
+  hasDirectedCycle(): boolean {
+    const visited = new Set<string>();
+    const inStack = new Set<string>();
+
+    const visit = (node: string): boolean => {
+      if (inStack.has(node)) {
+        return true;
+      }
+      if (visited.has(node)) {
+        return false;
+      }
+      visited.add(node);
+      inStack.add(node);
+      const outgoing = this.outAdjacency.get(node);
+      if (outgoing) {
+        for (const next of Array.from(outgoing).sort()) {
+          if (visit(next)) {
+            return true;
+          }
+        }
+      }
+      inStack.delete(node);
+      return false;
+    };
+
+    for (const node of Array.from(this.outAdjacency.keys()).sort()) {
+      if (visit(node)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  /**
+   * Returns true when `accountId` can reach a directed cycle by
+   * following outgoing edges (or is on a cycle reachable from itself).
+   *
+   * Useful for flagging accounts involved in circular layering flows.
+   */
+  hasDirectedCycleFrom(accountId: string): boolean {
+    if (!this.hasNode(accountId)) {
+      return false;
+    }
+    const reachable = new Set<string>([accountId, ...this.reachableFrom(accountId)]);
+    const visited = new Set<string>();
+    const inStack = new Set<string>();
+
+    const visit = (node: string): boolean => {
+      if (!reachable.has(node)) {
+        return false;
+      }
+      if (inStack.has(node)) {
+        return true;
+      }
+      if (visited.has(node)) {
+        return false;
+      }
+      visited.add(node);
+      inStack.add(node);
+      const outgoing = this.outAdjacency.get(node);
+      if (outgoing) {
+        for (const next of Array.from(outgoing).sort()) {
+          if (visit(next)) {
+            return true;
+          }
+        }
+      }
+      inStack.delete(node);
+      return false;
+    };
+
+    return visit(accountId);
+  }
+
   private sortedSet(values: Set<string> | undefined): string[] {
     return values ? Array.from(values).sort() : [];
   }
