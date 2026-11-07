@@ -166,6 +166,22 @@ export type {
   LifecycleOptions,
 } from "./features/lifecycle.js";
 export {
+  DEFAULT_RAPID_PATH_PAYMENT_WINDOW_MS,
+  DEFAULT_LONG_CHAIN_HOPS,
+  PATH_PAYMENT_TYPES,
+  extractPathPaymentLayeringFeatures,
+  getPathHopCount,
+  hasCircularPath,
+  isPathPaymentTransaction,
+  pathPaymentLayeringFeaturesToFeatureMap,
+  createPathPaymentLayeringFeatureProvider,
+} from "./features/pathPaymentLayering.js";
+export type {
+  PathPaymentLayeringFeatures,
+  PathPaymentLayeringOptions,
+  PathPaymentLayeringProviderOptions,
+} from "./features/pathPaymentLayering.js";
+export {
   FeatureRegistry,
   createFeatureRegistry,
   createDefaultFeatureRegistry,
@@ -184,3 +200,5 @@ export {
   createDefaultRules,
 } from "./rules/engine.js";
 export type { Rule, RuleContext, RuleEngineOptions } from "./rules/engine.js";
+export { createPathPaymentLayeringRule } from "./rules/pathPaymentLayering.js";
+export type { PathPaymentLayeringRuleOptions } from "./rules/pathPaymentLayering.js";
