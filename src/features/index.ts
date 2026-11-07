@@ -81,3 +81,12 @@ export type {
   LifecycleFeatures,
   LifecycleOptions,
 } from "./lifecycle.js";
+
+export {
+  FeatureRegistry,
+  createFeatureRegistry,
+  createDefaultFeatureRegistry,
+  createDefaultFeatureProviders,
+  extractFeatures,
+} from "./registry.js";
+export type { FeatureRegistryOptions } from "./registry.js";

@@ -155,3 +155,32 @@ export type {
   MemoEntry,
   MemoType,
 } from "./features/memo.js";
+export {
+  DEFAULT_RAPID_MERGE_WINDOW_MS,
+  extractLifecycleFeatures,
+  lifecycleFeaturesToFeatureMap,
+  createLifecycleFeatureProvider,
+} from "./features/lifecycle.js";
+export type {
+  LifecycleFeatures,
+  LifecycleOptions,
+} from "./features/lifecycle.js";
+export {
+  FeatureRegistry,
+  createFeatureRegistry,
+  createDefaultFeatureRegistry,
+  createDefaultFeatureProviders,
+  extractFeatures,
+} from "./features/registry.js";
+export type { FeatureRegistryOptions } from "./features/registry.js";
+export {
+  RuleEngine,
+  createRuleEngine,
+  createDefaultRuleEngine,
+  createRule,
+  createFreshAccountRule,
+  createRapidFanOutRule,
+  createHighVelocityRule,
+  createDefaultRules,
+} from "./rules/engine.js";
+export type { Rule, RuleContext, RuleEngineOptions } from "./rules/engine.js";
