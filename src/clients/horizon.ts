@@ -126,15 +126,26 @@ export interface Transaction {
   ledger?: number;
   /** Horizon paging token for pagination callers. */
   pagingToken: string;
+  /**
+   * Intermediate path assets for path payments, when available from
+   * operation-enriched records. Each entry describes one hop asset.
+   * Used by path-payment layering detection (#26).
+   */
+  path?: ReadonlyArray<{
+    asset_type?: string;
+    asset_code?: string;
+    asset_issuer?: string;
+  }>;
 }
 
-/** Raw shape of Horizon's transaction records (subset we consume). */
+/** Raw shape of Horizon's transaction/operation records (subset we consume). */
 interface RawHorizonTransaction {
   id: string;
   paging_token?: string;
   created_at?: string;
   source_account?: string;
   type?: string;
+  operation_type?: string;
   amount?: string;
   asset_code?: string;
   asset_issuer?: string;
@@ -144,6 +155,11 @@ interface RawHorizonTransaction {
   memo_type?: string;
   successful?: boolean;
   ledger?: number;
+  path?: Array<{
+    asset_type?: string;
+    asset_code?: string;
+    asset_issuer?: string;
+  }>;
 }
 
 /** Raw HAL envelope for a Horizon collection (transactions, etc.). */
@@ -164,7 +180,7 @@ export function normalizeTransaction(raw: RawHorizonTransaction): Transaction {
     id: raw.id,
     createdAt: raw.created_at ?? "",
     sourceAccount: raw.source_account ?? "",
-    type: raw.type ?? "",
+    type: raw.type ?? raw.operation_type ?? "",
     amount: parseAmount(raw.amount ?? "0"),
     assetCode: isNative ? "XLM" : raw.asset_code,
     assetIssuer: raw.asset_issuer,
@@ -175,6 +191,7 @@ export function normalizeTransaction(raw: RawHorizonTransaction): Transaction {
     successful: raw.successful,
     ledger: raw.ledger,
     pagingToken: raw.paging_token ?? "",
+    path: Array.isArray(raw.path) ? raw.path : undefined,
   };
 }
 
