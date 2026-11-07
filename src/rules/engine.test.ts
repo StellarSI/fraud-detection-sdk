@@ -20,10 +20,11 @@ import {
 import type { Rule, RuleContext } from "./engine.js";
 
 function customRule(overrides: Partial<Rule> = {}): Rule {
+  const id = overrides.id ?? "custom";
   return {
-    id: "custom",
+    id,
     weight: 0.4,
-    evaluate: () => ({ id: "custom", weight: 1, detail: "Custom rule fired" }),
+    evaluate: () => ({ id, weight: 1, detail: "Custom rule fired" }),
     ...overrides,
   };
 }
