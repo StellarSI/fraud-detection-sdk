@@ -271,3 +271,40 @@ describe("createGraphFeatureProvider", () => {
     expect(() => provider.compute({ transactions: [] })).toThrow(ValidationError);
   });
 });
+
+describe("CounterpartyGraph cycle detection", () => {
+  it("detects no cycle in a chain", () => {
+    const graph = buildCounterpartyGraph([
+      makeTx("A", "B"),
+      makeTx("B", "C"),
+      makeTx("C", "D"),
+    ]);
+    expect(graph.hasDirectedCycle()).toBe(false);
+    expect(graph.hasDirectedCycleFrom("A")).toBe(false);
+  });
+
+  it("detects a directed ring cycle", () => {
+    const graph = buildCounterpartyGraph([
+      makeTx("A", "B"),
+      makeTx("B", "C"),
+      makeTx("C", "A"),
+    ]);
+    expect(graph.hasDirectedCycle()).toBe(true);
+    expect(graph.hasDirectedCycleFrom("A")).toBe(true);
+  });
+
+  it("detects a cycle reachable from an entry node", () => {
+    const graph = buildCounterpartyGraph([
+      makeTx("S", "A"),
+      makeTx("A", "B"),
+      makeTx("B", "A"),
+    ]);
+    expect(graph.hasDirectedCycle()).toBe(true);
+    expect(graph.hasDirectedCycleFrom("S")).toBe(true);
+  });
+
+  it("returns false for unknown start node in hasDirectedCycleFrom", () => {
+    const graph = buildCounterpartyGraph([makeTx("A", "B")]);
+    expect(graph.hasDirectedCycleFrom("MISSING")).toBe(false);
+  });
+});
