@@ -198,6 +198,17 @@ export type {
   TrustlineAbuseProviderOptions,
 } from "./features/trustlineAbuse.js";
 export {
+  DEFAULT_DUST_THRESHOLD,
+  extractDustingFeatures,
+  dustingFeaturesToFeatureMap,
+  createDustingFeatureProvider,
+} from "./features/dusting.js";
+export type {
+  DustingFeatures,
+  DustingOptions,
+  DustingProviderOptions,
+} from "./features/dusting.js";
+export {
   FeatureRegistry,
   createFeatureRegistry,
   createDefaultFeatureRegistry,
@@ -237,3 +248,14 @@ export {
   createThrowawayMergeRule,
 } from "./rules/throwawayMerge.js";
 export type { ThrowawayMergeRuleOptions } from "./rules/throwawayMerge.js";
+export {
+  DEFAULT_DUSTING_RULE_WEIGHT,
+  DEFAULT_DUSTING_RECIPIENT_THRESHOLD,
+  DEFAULT_DUSTING_PAYMENT_THRESHOLD,
+  DEFAULT_DUSTING_MIN_SCORE,
+  DEFAULT_LEGITIMATE_MIN_AVERAGE_AMOUNT,
+  DEFAULT_LEGITIMATE_MIN_TOTAL_VOLUME,
+  DEFAULT_LEGITIMATE_MAX_ASSET_DIVERSITY,
+  createDustingRule,
+} from "./rules/dusting.js";
+export type { DustingRuleOptions } from "./rules/dusting.js";
