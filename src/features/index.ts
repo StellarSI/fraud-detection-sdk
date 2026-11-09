@@ -100,6 +100,23 @@ export type {
 } from "./pathPaymentLayering.js";
 
 export {
+  DEFAULT_TRUSTLINE_BURST_WINDOW_MS,
+  DEFAULT_EXTREME_TRUSTLINE_COUNT,
+  DEFAULT_TRUSTLINE_BURST_THRESHOLD,
+  DEFAULT_TRUSTLINE_DUST_RATIO_THRESHOLD,
+  DEFAULT_TRUSTLINE_SPAM_ISSUER_COUNT,
+  extractTrustlineAbuseFeatures,
+  isChangeTrustTransaction,
+  trustlineAbuseFeaturesToFeatureMap,
+  createTrustlineAbuseFeatureProvider,
+} from "./trustlineAbuse.js";
+export type {
+  TrustlineAbuseFeatures,
+  TrustlineAbuseOptions,
+  TrustlineAbuseProviderOptions,
+} from "./trustlineAbuse.js";
+
+export {
   FeatureRegistry,
   createFeatureRegistry,
   createDefaultFeatureRegistry,

@@ -182,6 +182,22 @@ export type {
   PathPaymentLayeringProviderOptions,
 } from "./features/pathPaymentLayering.js";
 export {
+  DEFAULT_TRUSTLINE_BURST_WINDOW_MS,
+  DEFAULT_EXTREME_TRUSTLINE_COUNT,
+  DEFAULT_TRUSTLINE_BURST_THRESHOLD,
+  DEFAULT_TRUSTLINE_DUST_RATIO_THRESHOLD,
+  DEFAULT_TRUSTLINE_SPAM_ISSUER_COUNT,
+  extractTrustlineAbuseFeatures,
+  isChangeTrustTransaction,
+  trustlineAbuseFeaturesToFeatureMap,
+  createTrustlineAbuseFeatureProvider,
+} from "./features/trustlineAbuse.js";
+export type {
+  TrustlineAbuseFeatures,
+  TrustlineAbuseOptions,
+  TrustlineAbuseProviderOptions,
+} from "./features/trustlineAbuse.js";
+export {
   FeatureRegistry,
   createFeatureRegistry,
   createDefaultFeatureRegistry,
@@ -202,3 +218,13 @@ export {
 export type { Rule, RuleContext, RuleEngineOptions } from "./rules/engine.js";
 export { createPathPaymentLayeringRule } from "./rules/pathPaymentLayering.js";
 export type { PathPaymentLayeringRuleOptions } from "./rules/pathPaymentLayering.js";
+export {
+  DEFAULT_TRUSTLINE_ABUSE_RULE_WEIGHT,
+  DEFAULT_TRUSTLINE_ABUSE_MIN_SCORE,
+  DEFAULT_TRUSTLINE_ABUSE_EXTREME_COUNT,
+  DEFAULT_TRUSTLINE_ABUSE_BURST_THRESHOLD,
+  DEFAULT_TRUSTLINE_ABUSE_DUST_RATIO,
+  DEFAULT_TRUSTLINE_ABUSE_SPAM_ISSUERS,
+  createTrustlineAbuseRule,
+} from "./rules/trustlineAbuse.js";
+export type { TrustlineAbuseRuleOptions } from "./rules/trustlineAbuse.js";
