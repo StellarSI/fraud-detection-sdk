@@ -117,6 +117,18 @@ export type {
 } from "./trustlineAbuse.js";
 
 export {
+  DEFAULT_DUST_THRESHOLD,
+  extractDustingFeatures,
+  dustingFeaturesToFeatureMap,
+  createDustingFeatureProvider,
+} from "./dusting.js";
+export type {
+  DustingFeatures,
+  DustingOptions,
+  DustingProviderOptions,
+} from "./dusting.js";
+
+export {
   FeatureRegistry,
   createFeatureRegistry,
   createDefaultFeatureRegistry,
