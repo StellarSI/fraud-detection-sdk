@@ -228,3 +228,12 @@ export {
   createTrustlineAbuseRule,
 } from "./rules/trustlineAbuse.js";
 export type { TrustlineAbuseRuleOptions } from "./rules/trustlineAbuse.js";
+export {
+  DEFAULT_THROWAWAY_MERGE_RULE_WEIGHT,
+  DEFAULT_YOUNG_ACCOUNT_MAX_AGE_MS,
+  DEFAULT_MAX_MS_TO_FIRST_MERGE,
+  DEFAULT_MIN_MERGE_COUNT,
+  DEFAULT_THROWAWAY_MERGE_MIN_SCORE,
+  createThrowawayMergeRule,
+} from "./rules/throwawayMerge.js";
+export type { ThrowawayMergeRuleOptions } from "./rules/throwawayMerge.js";
