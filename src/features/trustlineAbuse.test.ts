@@ -189,7 +189,9 @@ describe("extractTrustlineAbuseFeatures - burst pattern", () => {
 
     expect(features.churnCount).toBe(13);
     expect(features.burstCount).toBe(8);
-    expect(features.burstDetected).toBe(true);
+    // 8 is below the default threshold (10), unlike the total (13): the
+    // windowed max is what counts, not the aggregate.
+    expect(features.burstDetected).toBe(false);
   });
 
   it("ignores change_trust operations outside the churn window", () => {
