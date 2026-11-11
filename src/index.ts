@@ -276,8 +276,6 @@ export type { DustingRuleOptions } from "./rules/dusting.js";
 export {
   DEFAULT_CREATE_ACCOUNT_FUNDING_RULE_WEIGHT,
   DEFAULT_CREATE_ACCOUNT_FUNDING_MIN_SCORE,
-  DEFAULT_CREATE_ACCOUNT_FUNDING_BURST_THRESHOLD,
-  DEFAULT_CREATE_ACCOUNT_FUNDING_EXTREME_COUNT,
   createCreateAccountFundingRule,
 } from "./rules/createAccountFunding.js";
 export type { CreateAccountFundingRuleOptions } from "./rules/createAccountFunding.js";
