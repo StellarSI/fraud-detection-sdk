@@ -129,6 +129,21 @@ export type {
 } from "./dusting.js";
 
 export {
+  DEFAULT_CREATE_ACCOUNT_FUNDING_WINDOW_MS,
+  DEFAULT_CREATE_ACCOUNT_FUNDING_BURST_WINDOW_MS,
+  DEFAULT_CREATE_ACCOUNT_FUNDING_BURST_THRESHOLD,
+  DEFAULT_CREATE_ACCOUNT_FUNDING_EXTREME_COUNT,
+  extractCreateAccountFundingFeatures,
+  createAccountFundingFeaturesToFeatureMap,
+  createCreateAccountFundingFeatureProvider,
+} from "./createAccountFunding.js";
+export type {
+  CreateAccountFundingFeatures,
+  CreateAccountFundingOptions,
+  CreateAccountFundingProviderOptions,
+} from "./createAccountFunding.js";
+
+export {
   FeatureRegistry,
   createFeatureRegistry,
   createDefaultFeatureRegistry,

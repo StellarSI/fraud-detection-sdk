@@ -209,6 +209,20 @@ export type {
   DustingProviderOptions,
 } from "./features/dusting.js";
 export {
+  DEFAULT_CREATE_ACCOUNT_FUNDING_WINDOW_MS,
+  DEFAULT_CREATE_ACCOUNT_FUNDING_BURST_WINDOW_MS,
+  DEFAULT_CREATE_ACCOUNT_FUNDING_BURST_THRESHOLD,
+  DEFAULT_CREATE_ACCOUNT_FUNDING_EXTREME_COUNT,
+  extractCreateAccountFundingFeatures,
+  createAccountFundingFeaturesToFeatureMap,
+  createCreateAccountFundingFeatureProvider,
+} from "./features/createAccountFunding.js";
+export type {
+  CreateAccountFundingFeatures,
+  CreateAccountFundingOptions,
+  CreateAccountFundingProviderOptions,
+} from "./features/createAccountFunding.js";
+export {
   FeatureRegistry,
   createFeatureRegistry,
   createDefaultFeatureRegistry,
@@ -259,3 +273,9 @@ export {
   createDustingRule,
 } from "./rules/dusting.js";
 export type { DustingRuleOptions } from "./rules/dusting.js";
+export {
+  DEFAULT_CREATE_ACCOUNT_FUNDING_RULE_WEIGHT,
+  DEFAULT_CREATE_ACCOUNT_FUNDING_MIN_SCORE,
+  createCreateAccountFundingRule,
+} from "./rules/createAccountFunding.js";
+export type { CreateAccountFundingRuleOptions } from "./rules/createAccountFunding.js";
