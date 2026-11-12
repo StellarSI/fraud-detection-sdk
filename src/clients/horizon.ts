@@ -136,6 +136,21 @@ export interface Transaction {
     asset_code?: string;
     asset_issuer?: string;
   }>;
+  /**
+   * Claimant account ids for `create_claimable_balance` operations and
+   * other claimable-balance records, when available from
+   * operation-enriched records. Accepts bare account ids or Horizon's
+   * claimant objects (`destination`/`account`); surviving ids are
+   * deduplicated. Used by claimable-balance abuse and unsolicited
+   * claim-spam detection (#31, #32).
+   */
+  claimants?: ReadonlyArray<string>;
+  /**
+   * Claimable-balance id carried by `create_claimable_balance` and
+   * `claim_claimable_balance` records, when available. Used to match
+   * claims to created balances for unclaimed-balance detection (#31).
+   */
+  balanceId?: string;
 }
 
 /** Raw shape of Horizon's transaction/operation records (subset we consume). */
@@ -160,12 +175,50 @@ interface RawHorizonTransaction {
     asset_code?: string;
     asset_issuer?: string;
   }>;
+  claimants?: unknown;
+  balance_id?: string;
 }
 
 /** Raw HAL envelope for a Horizon collection (transactions, etc.). */
 interface RawHorizonCollection {
   _embedded?: { records?: RawHorizonTransaction[] };
   _links?: { next?: { href?: string } };
+}
+
+/**
+ * Normalizes Horizon's claimant list into account ids.
+ *
+ * Accepts bare strings or claimant objects (`destination`/`account`),
+ * ignores anything else, and deduplicates while preserving first-seen order.
+ */
+function normalizeClaimants(raw: unknown): string[] | undefined {
+  if (!Array.isArray(raw)) {
+    return undefined;
+  }
+  const seen = new Set<string>();
+  const claimants: string[] = [];
+  for (const entry of raw) {
+    let candidate: string | undefined;
+    if (typeof entry === "string") {
+      candidate = entry;
+    } else if (entry && typeof entry === "object") {
+      const record = entry as Record<string, unknown>;
+      const destination = record.destination ?? record.account ?? record.account_id;
+      if (typeof destination === "string") {
+        candidate = destination;
+      }
+    }
+    if (candidate === undefined) {
+      continue;
+    }
+    const trimmed = candidate.trim();
+    if (trimmed.length === 0 || seen.has(trimmed)) {
+      continue;
+    }
+    seen.add(trimmed);
+    claimants.push(trimmed);
+  }
+  return claimants.length > 0 ? claimants : undefined;
 }
 
 /**
@@ -176,6 +229,10 @@ interface RawHorizonCollection {
  */
 export function normalizeTransaction(raw: RawHorizonTransaction): Transaction {
   const isNative = raw.asset_code === undefined;
+  const balanceId =
+    typeof raw.balance_id === "string" && raw.balance_id.trim().length > 0
+      ? raw.balance_id
+      : undefined;
   return {
     id: raw.id,
     createdAt: raw.created_at ?? "",
@@ -192,6 +249,8 @@ export function normalizeTransaction(raw: RawHorizonTransaction): Transaction {
     ledger: raw.ledger,
     pagingToken: raw.paging_token ?? "",
     path: Array.isArray(raw.path) ? raw.path : undefined,
+    claimants: normalizeClaimants(raw.claimants),
+    balanceId,
   };
 }
 

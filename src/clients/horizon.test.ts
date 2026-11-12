@@ -10,6 +10,7 @@ import {
   HorizonRestClient,
   validateAccountId,
   normalizeAccount,
+  normalizeTransaction,
   paginate,
   collect,
   DEFAULT_PAGINATION_LIMIT,
@@ -447,5 +448,55 @@ describe("HorizonRestClient.getTransactions (issue #13)", () => {
       clientFor(fetchImpl).getTransactions(ADDRESS, { order: "sideways" as never })
     ).rejects.toBeInstanceOf(ValidationError);
     expect(fetchImpl).not.toHaveBeenCalled();
+  });
+});
+
+describe("normalizeTransaction (issues #31, #32)", () => {
+  it("passes through claimant account ids, deduplicated and order-preserving", () => {
+    const tx = normalizeTransaction({
+      id: "t-cb-1",
+      type: "create_claimable_balance",
+      source_account: ADDRESS,
+      from: ADDRESS,
+      paging_token: "100",
+      created_at: "2026-06-01T00:00:00Z",
+      claimants: ["GAAA", "GBBB", "GAAA"],
+      balance_id: "bal-1",
+    });
+
+    expect(tx.claimants).toEqual(["GAAA", "GBBB"]);
+    expect(tx.balanceId).toBe("bal-1");
+  });
+
+  it("normalizes Horizon claimant objects into destination ids", () => {
+    const tx = normalizeTransaction({
+      id: "t-cb-2",
+      type: "create_claimable_balance",
+      source_account: ADDRESS,
+      paging_token: "101",
+      claimants: [
+        { destination: "GDEST1" },
+        { account: "GDEST2" },
+        { predicate: { unconditional: true } },
+        42,
+        null,
+      ],
+    });
+
+    expect(tx.claimants).toEqual(["GDEST1", "GDEST2"]);
+  });
+
+  it("omits claimants and balanceId when absent or empty", () => {
+    const tx = normalizeTransaction({
+      id: "t-cb-3",
+      type: "claim_claimable_balance",
+      source_account: ADDRESS,
+      paging_token: "102",
+      claimants: [],
+      balance_id: "   ",
+    });
+
+    expect(tx.claimants).toBeUndefined();
+    expect(tx.balanceId).toBeUndefined();
   });
 });
