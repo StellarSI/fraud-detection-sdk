@@ -1,9 +1,9 @@
 /**
- * Feature extraction families (issues #19, #20, #21, #22, #23).
+ * Feature extraction families (issues #19, #20, #21, #22, #23, #31, #32).
  *
  * Re-exports the shared provider contracts plus the velocity, graph,
- * asset, memo, and lifecycle implementations so the registry (#24) and
- * SDK consumers can import them from one place.
+ * asset, memo, lifecycle, and claimable-balance implementations so the
+ * registry (#24) and SDK consumers can import them from one place.
  */
 
 export type {
@@ -142,6 +142,24 @@ export type {
   CreateAccountFundingOptions,
   CreateAccountFundingProviderOptions,
 } from "./createAccountFunding.js";
+
+export {
+  DEFAULT_CLAIMABLE_BALANCE_WINDOW_MS,
+  DEFAULT_CLAIMABLE_BALANCE_BURST_WINDOW_MS,
+  DEFAULT_CLAIMABLE_BALANCE_BURST_THRESHOLD,
+  DEFAULT_CLAIMABLE_BALANCE_EXTREME_COUNT,
+  DEFAULT_CLAIMABLE_BALANCE_UNCLAIMED_AGE_MS,
+  DEFAULT_CLAIMABLE_BALANCE_SPAM_RECIPIENT_THRESHOLD,
+  CLAIMABLE_BALANCE_AIRDROP_MEMO_PATTERN,
+  extractClaimableBalanceFeatures,
+  claimableBalanceFeaturesToFeatureMap,
+  createClaimableBalanceFeatureProvider,
+} from "./claimableBalances.js";
+export type {
+  ClaimableBalanceFeatures,
+  ClaimableBalanceOptions,
+  ClaimableBalanceProviderOptions,
+} from "./claimableBalances.js";
 
 export {
   FeatureRegistry,

@@ -2,7 +2,8 @@
  * Pluggable rules engine (issues #25, #38).
  *
  * Re-exports the engine contracts plus the starting-point example rules
- * so consumers can import them from one place.
+ * and the detector rules added since, so consumers can import them from
+ * one place.
  */
 
 export {
@@ -61,3 +62,23 @@ export {
   createCreateAccountFundingRule,
 } from "./createAccountFunding.js";
 export type { CreateAccountFundingRuleOptions } from "./createAccountFunding.js";
+
+export {
+  DEFAULT_CLAIMABLE_BALANCE_ABUSE_RULE_WEIGHT,
+  DEFAULT_CLAIMABLE_BALANCE_ABUSE_MIN_SCORE,
+  DEFAULT_CLAIMABLE_BALANCE_ABUSE_EXTREME_COUNT,
+  DEFAULT_CLAIMABLE_BALANCE_ABUSE_BURST_THRESHOLD,
+  DEFAULT_CLAIMABLE_BALANCE_ABUSE_UNCLAIMED_RATIO,
+  createClaimableBalanceAbuseRule,
+} from "./claimableBalanceAbuse.js";
+export type { ClaimableBalanceAbuseRuleOptions } from "./claimableBalanceAbuse.js";
+
+export {
+  DEFAULT_UNSOLICITED_CLAIM_SPAM_RULE_WEIGHT,
+  DEFAULT_UNSOLICITED_CLAIM_SPAM_MIN_SCORE,
+  DEFAULT_UNSOLICITED_CLAIM_SPAM_RECIPIENT_THRESHOLD,
+  DEFAULT_UNSOLICITED_CLAIM_SPAM_UNRELATED_RATIO,
+  DEFAULT_UNSOLICITED_CLAIM_SPAM_AIRDROP_MAX_ASSET_DIVERSITY,
+  createUnsolicitedClaimSpamRule,
+} from "./unsolicitedClaimSpam.js";
+export type { UnsolicitedClaimSpamRuleOptions } from "./unsolicitedClaimSpam.js";

@@ -279,3 +279,38 @@ export {
   createCreateAccountFundingRule,
 } from "./rules/createAccountFunding.js";
 export type { CreateAccountFundingRuleOptions } from "./rules/createAccountFunding.js";
+export {
+  DEFAULT_CLAIMABLE_BALANCE_WINDOW_MS,
+  DEFAULT_CLAIMABLE_BALANCE_BURST_WINDOW_MS,
+  DEFAULT_CLAIMABLE_BALANCE_BURST_THRESHOLD,
+  DEFAULT_CLAIMABLE_BALANCE_EXTREME_COUNT,
+  DEFAULT_CLAIMABLE_BALANCE_UNCLAIMED_AGE_MS,
+  DEFAULT_CLAIMABLE_BALANCE_SPAM_RECIPIENT_THRESHOLD,
+  CLAIMABLE_BALANCE_AIRDROP_MEMO_PATTERN,
+  extractClaimableBalanceFeatures,
+  claimableBalanceFeaturesToFeatureMap,
+  createClaimableBalanceFeatureProvider,
+} from "./features/claimableBalances.js";
+export type {
+  ClaimableBalanceFeatures,
+  ClaimableBalanceOptions,
+  ClaimableBalanceProviderOptions,
+} from "./features/claimableBalances.js";
+export {
+  DEFAULT_CLAIMABLE_BALANCE_ABUSE_RULE_WEIGHT,
+  DEFAULT_CLAIMABLE_BALANCE_ABUSE_MIN_SCORE,
+  DEFAULT_CLAIMABLE_BALANCE_ABUSE_EXTREME_COUNT,
+  DEFAULT_CLAIMABLE_BALANCE_ABUSE_BURST_THRESHOLD,
+  DEFAULT_CLAIMABLE_BALANCE_ABUSE_UNCLAIMED_RATIO,
+  createClaimableBalanceAbuseRule,
+} from "./rules/claimableBalanceAbuse.js";
+export type { ClaimableBalanceAbuseRuleOptions } from "./rules/claimableBalanceAbuse.js";
+export {
+  DEFAULT_UNSOLICITED_CLAIM_SPAM_RULE_WEIGHT,
+  DEFAULT_UNSOLICITED_CLAIM_SPAM_MIN_SCORE,
+  DEFAULT_UNSOLICITED_CLAIM_SPAM_RECIPIENT_THRESHOLD,
+  DEFAULT_UNSOLICITED_CLAIM_SPAM_UNRELATED_RATIO,
+  DEFAULT_UNSOLICITED_CLAIM_SPAM_AIRDROP_MAX_ASSET_DIVERSITY,
+  createUnsolicitedClaimSpamRule,
+} from "./rules/unsolicitedClaimSpam.js";
+export type { UnsolicitedClaimSpamRuleOptions } from "./rules/unsolicitedClaimSpam.js";
