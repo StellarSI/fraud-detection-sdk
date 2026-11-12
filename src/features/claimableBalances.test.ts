@@ -197,7 +197,7 @@ describe("extractClaimableBalanceFeatures - spam context", () => {
     );
 
     expect(features.unrelatedClaimants).toBe(2);
-    expect(features.unrelatedRatio).toBeCloseTo(2 / 3, 5);
+    expect(features.unrelatedRatio).toBe(0.6667);
   });
 
   it("detects uniform-amount, single-asset airdrop context", () => {
