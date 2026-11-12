@@ -174,6 +174,19 @@ export function createClaimableBalanceAbuseRule(
             ? clamp01(unclaimed / created)
             : 0;
 
+      // Signal gate: require at least one piece of actual abuse evidence —
+      // stale unclaimed balances, burst creation, mass creation, or a
+      // meaningful feature score. A handful of promptly claimed balances
+      // carries no evidence and emits nothing.
+      const hasAbuseEvidence =
+        unclaimed > 0 ||
+        burstDetected ||
+        created >= extremeCount ||
+        featureScore >= minScore;
+      if (!hasAbuseEvidence) {
+        return null;
+      }
+
       const countFactor = clamp01(created / extremeCount);
       const unclaimedFactor = clamp01(
         effectiveUnclaimedRatio / Math.max(unclaimedRatioThreshold, 1e-9)
