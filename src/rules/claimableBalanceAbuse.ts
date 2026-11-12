@@ -174,15 +174,13 @@ export function createClaimableBalanceAbuseRule(
             ? clamp01(unclaimed / created)
             : 0;
 
-      // Signal gate: require at least one piece of actual abuse evidence —
-      // stale unclaimed balances, burst creation, mass creation, or a
-      // meaningful feature score. A handful of promptly claimed balances
-      // carries no evidence and emits nothing.
+      // Signal gate: require at least one piece of concrete abuse evidence —
+      // stale unclaimed balances, burst creation, or mass creation. A
+      // handful of promptly claimed balances carries no evidence and emits
+      // nothing, no matter how the feature score accumulates. The feature
+      // score only scales the severity weight once the gate is open.
       const hasAbuseEvidence =
-        unclaimed > 0 ||
-        burstDetected ||
-        created >= extremeCount ||
-        featureScore >= minScore;
+        unclaimed > 0 || burstDetected || created >= extremeCount;
       if (!hasAbuseEvidence) {
         return null;
       }
