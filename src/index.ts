@@ -314,3 +314,11 @@ export {
   createUnsolicitedClaimSpamRule,
 } from "./rules/unsolicitedClaimSpam.js";
 export type { UnsolicitedClaimSpamRuleOptions } from "./rules/unsolicitedClaimSpam.js";
+export {
+  DEFAULT_REUSED_MEMO_ID_RULE_WEIGHT,
+  DEFAULT_REUSED_MEMO_ID_MIN_SCORE,
+  DEFAULT_REUSED_MEMO_ID_REUSE_THRESHOLD,
+  DEFAULT_REUSED_MEMO_ID_DISTINCT_THRESHOLD,
+  createReusedMemoIdRule,
+} from "./rules/reusedMemoId.js";
+export type { ReusedMemoIdRuleOptions } from "./rules/reusedMemoId.js";
