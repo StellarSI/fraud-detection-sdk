@@ -84,6 +84,25 @@ export {
 export type { UnsolicitedClaimSpamRuleOptions } from "./unsolicitedClaimSpam.js";
 
 export {
+  DEFAULT_ANCHOR_ANOMALY_RULE_WEIGHT,
+  DEFAULT_ANCHOR_ANOMALY_MIN_SCORE,
+  DEFAULT_ANCHOR_ANOMALY_MIN_TRANSACTIONS,
+  DEFAULT_ANCHOR_ANOMALY_MISSING_MEMO_RATIO,
+  DEFAULT_ANCHOR_ANOMALY_MEMO_REUSE_THRESHOLD,
+  DEFAULT_ANCHOR_ANOMALY_CONCENTRATION_THRESHOLD,
+  DEFAULT_ANCHOR_ANOMALY_OUTLIER_THRESHOLD,
+  createAnchorAnomalyRule,
+} from "./anchorAnomaly.js";
+export type { AnchorAnomalyRuleOptions } from "./anchorAnomaly.js";
+
+export {
+  DEFAULT_MULTISIG_AUTHORIZATION_RULE_WEIGHT,
+  DEFAULT_MULTISIG_AUTHORIZATION_MIN_SCORE,
+  createMultisigAuthorizationRule,
+} from "./multisigAuth.js";
+export type { MultisigAuthorizationRuleOptions } from "./multisigAuth.js";
+
+export {
   DEFAULT_REUSED_MEMO_ID_RULE_WEIGHT,
   DEFAULT_REUSED_MEMO_ID_MIN_SCORE,
   DEFAULT_REUSED_MEMO_ID_REUSE_THRESHOLD,
