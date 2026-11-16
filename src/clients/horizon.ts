@@ -56,6 +56,54 @@ export interface AccountSigner {
   type: string;
 }
 
+/** A signer altered by a `set_options` operation. */
+export interface SetOptionsSigner {
+  /** Public key of the affected signer. */
+  readonly key?: string;
+  /**
+   * New signature weight; `0` disables (removes) the signer.
+   */
+  readonly weight?: number;
+  /** Signer type reported by the enrichment ("ed25519_public_key", ...). */
+  readonly type?: string;
+}
+
+/** Signature threshold values set by a `set_options` operation. */
+export interface SetOptionsThresholds {
+  readonly low?: number;
+  readonly medium?: number;
+  readonly high?: number;
+}
+
+/**
+ * `set_options` operation details, when available from operation-enriched
+ * records. Used by the multisig authorization detector (#35).
+ *
+ * Horizon does not embed operation details in transaction records, so this
+ * block is populated only when the caller enriches records (or tests build
+ * them). Everything is optional; the multisig feature extractor degrades
+ * gracefully when parts are missing.
+ */
+export interface SetOptionsDetails {
+  /** Signer entries altered by the operation; weight 0 means removal. */
+  readonly signers?: ReadonlyArray<SetOptionsSigner>;
+  /** New master weight, when the operation sets it. */
+  readonly masterWeight?: number;
+  /** New thresholds, when the operation sets them. */
+  readonly thresholds?: SetOptionsThresholds;
+  /** Previous master weight, when known; enables reduction detection. */
+  readonly previousMasterWeight?: number;
+  /** Previous thresholds, when known; enables reduction detection. */
+  readonly previousThresholds?: SetOptionsThresholds;
+  /**
+   * Account flags enabled by the operation, normalized to snake_case names
+   * ("auth_required", "auth_revocable", "auth_immutable", "clawback_enabled").
+   */
+  readonly setFlags?: ReadonlyArray<string>;
+  /** Account flags disabled by the operation (same normalized names). */
+  readonly clearFlags?: ReadonlyArray<string>;
+}
+
 /** Normalized Stellar account. Feature code consumes this, never raw JSON. */
 export interface Account {
   /** The account ID (G...). */
@@ -151,6 +199,13 @@ export interface Transaction {
    * claims to created balances for unclaimed-balance detection (#31).
    */
   balanceId?: string;
+  /**
+   * `set_options` operation details, when available from
+   * operation-enriched records. Used by multisig authorization detection
+   * (#35). Absence means the operation details are unknown, not that no
+   * `set_options` change occurred.
+   */
+  setOptions?: SetOptionsDetails;
 }
 
 /** Raw shape of Horizon's transaction/operation records (subset we consume). */
@@ -177,6 +232,7 @@ interface RawHorizonTransaction {
   }>;
   claimants?: unknown;
   balance_id?: string;
+  set_options?: unknown;
 }
 
 /** Raw HAL envelope for a Horizon collection (transactions, etc.). */
@@ -221,6 +277,196 @@ function normalizeClaimants(raw: unknown): string[] | undefined {
   return claimants.length > 0 ? claimants : undefined;
 }
 
+/** Stellar account flag bitmask values (from XDR AccountFlags). */
+const ACCOUNT_FLAG_NAMES: Readonly<Record<number, string>> = {
+  1: "auth_required",
+  2: "auth_revocable",
+  4: "auth_immutable",
+  8: "clawback_enabled",
+};
+
+function toFiniteNumber(value: unknown): number | undefined {
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return value;
+  }
+  if (typeof value === "string" && value.trim().length > 0) {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : undefined;
+  }
+  return undefined;
+}
+
+function normalizeFlagList(value: unknown): string[] | undefined {
+  if (value === undefined || value === null) {
+    return undefined;
+  }
+  const entries = Array.isArray(value) ? value : [value];
+  const flags: string[] = [];
+  for (const entry of entries) {
+    if (typeof entry === "number" && Number.isFinite(entry)) {
+      flags.push(ACCOUNT_FLAG_NAMES[entry] ?? `flag_${entry}`);
+      continue;
+    }
+    if (typeof entry === "string" && entry.trim().length > 0) {
+      flags.push(entry.trim().toLowerCase());
+    }
+  }
+  return flags.length > 0 ? flags : undefined;
+}
+
+function normalizeThresholds(value: unknown): SetOptionsThresholds | undefined {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return undefined;
+  }
+  const record = value as Record<string, unknown>;
+  const low = toFiniteNumber(record.low ?? record.low_threshold);
+  const medium = toFiniteNumber(record.medium ?? record.med_threshold ?? record.medium_threshold);
+  const high = toFiniteNumber(record.high ?? record.high_threshold);
+  if (low === undefined && medium === undefined && high === undefined) {
+    return undefined;
+  }
+  const thresholds: { low?: number; medium?: number; high?: number } = {};
+  if (low !== undefined) {
+    thresholds.low = low;
+  }
+  if (medium !== undefined) {
+    thresholds.medium = medium;
+  }
+  if (high !== undefined) {
+    thresholds.high = high;
+  }
+  return thresholds;
+}
+
+function normalizeSetOptionsSigners(
+  raw: Record<string, unknown>
+): SetOptionsSigner[] | undefined {
+  const entries: unknown[] = [];
+  // Horizon's set_options operation carries a single `signer` object;
+  // enriched records may instead carry a `signers` array.
+  if (Array.isArray(raw.signers)) {
+    entries.push(...raw.signers);
+  }
+  if (raw.signer !== undefined && raw.signer !== null) {
+    entries.push(raw.signer);
+  }
+  const signers: SetOptionsSigner[] = [];
+  for (const entry of entries) {
+    if (!entry || typeof entry !== "object" || Array.isArray(entry)) {
+      continue;
+    }
+    const record = entry as Record<string, unknown>;
+    const key =
+      typeof record.key === "string" && record.key.trim().length > 0
+        ? record.key.trim()
+        : typeof record.account_id === "string" && record.account_id.trim().length > 0
+          ? record.account_id.trim()
+          : undefined;
+    const weight = toFiniteNumber(record.weight);
+    const type =
+      typeof record.type === "string" && record.type.trim().length > 0
+        ? record.type.trim()
+        : undefined;
+    if (key === undefined && weight === undefined) {
+      continue;
+    }
+    const signer: { key?: string; weight?: number; type?: string } = {};
+    if (key !== undefined) {
+      signer.key = key;
+    }
+    if (weight !== undefined) {
+      signer.weight = weight;
+    }
+    if (type !== undefined) {
+      signer.type = type;
+    }
+    signers.push(signer);
+  }
+  return signers.length > 0 ? signers : undefined;
+}
+
+/**
+ * Normalizes a raw `set_options` object into {@link SetOptionsDetails}.
+ *
+ * Tolerates both Horizon's wire shape (`master_weight`, `low_threshold`,
+ * a single `signer`, bitmask `set_flags`/`clear_flags`) and a friendlier
+ * enriched shape (`masterWeight`, `thresholds`, `setFlags` as names).
+ * Anything unrecognized is dropped; returns `undefined` when nothing
+ * usable is present.
+ */
+export function normalizeSetOptions(raw: unknown): SetOptionsDetails | undefined {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
+    return undefined;
+  }
+  const record = raw as Record<string, unknown>;
+
+  const signers = normalizeSetOptionsSigners(record);
+  const masterWeight = toFiniteNumber(record.masterWeight ?? record.master_weight);
+  const previousMasterWeight = toFiniteNumber(
+    record.previousMasterWeight ?? record.previous_master_weight
+  );
+  const thresholds =
+    normalizeThresholds(record.thresholds) ??
+    normalizeThresholds({
+      low: record.low ?? record.low_threshold,
+      medium: record.medium ?? record.med_threshold ?? record.medium_threshold,
+      high: record.high ?? record.high_threshold,
+    });
+  const previousThresholds =
+    normalizeThresholds(record.previousThresholds ?? record.previous_thresholds) ??
+    normalizeThresholds({
+      low: record.previous_low_threshold ?? record.previousLow,
+      medium: record.previous_med_threshold ?? record.previous_medium_threshold ?? record.previousMedium,
+      high: record.previous_high_threshold ?? record.previousHigh,
+    });
+  const setFlags = normalizeFlagList(record.setFlags ?? record.set_flags);
+  const clearFlags = normalizeFlagList(record.clearFlags ?? record.clear_flags);
+
+  if (
+    signers === undefined &&
+    masterWeight === undefined &&
+    thresholds === undefined &&
+    previousMasterWeight === undefined &&
+    previousThresholds === undefined &&
+    setFlags === undefined &&
+    clearFlags === undefined
+  ) {
+    return undefined;
+  }
+
+  const details: {
+    signers?: SetOptionsSigner[];
+    masterWeight?: number;
+    thresholds?: SetOptionsThresholds;
+    previousMasterWeight?: number;
+    previousThresholds?: SetOptionsThresholds;
+    setFlags?: string[];
+    clearFlags?: string[];
+  } = {};
+  if (signers !== undefined) {
+    details.signers = signers;
+  }
+  if (masterWeight !== undefined) {
+    details.masterWeight = masterWeight;
+  }
+  if (thresholds !== undefined) {
+    details.thresholds = thresholds;
+  }
+  if (previousMasterWeight !== undefined) {
+    details.previousMasterWeight = previousMasterWeight;
+  }
+  if (previousThresholds !== undefined) {
+    details.previousThresholds = previousThresholds;
+  }
+  if (setFlags !== undefined) {
+    details.setFlags = setFlags;
+  }
+  if (clearFlags !== undefined) {
+    details.clearFlags = clearFlags;
+  }
+  return details;
+}
+
 /**
  * Maps a raw Horizon transaction record into the normalized
  * {@link Transaction} shape (issue #13).
@@ -251,6 +497,7 @@ export function normalizeTransaction(raw: RawHorizonTransaction): Transaction {
     path: Array.isArray(raw.path) ? raw.path : undefined,
     claimants: normalizeClaimants(raw.claimants),
     balanceId,
+    setOptions: normalizeSetOptions(raw.set_options),
   };
 }
 
