@@ -54,6 +54,7 @@ export {
   validateAccountId,
   normalizeAccount,
   normalizeTransaction,
+  normalizeSetOptions,
   paginate,
   collect,
   DEFAULT_PAGINATION_LIMIT,
@@ -87,6 +88,9 @@ export type {
   Account,
   AccountBalance,
   AccountSigner,
+  SetOptionsDetails,
+  SetOptionsSigner,
+  SetOptionsThresholds,
   Transaction,
   GetTransactionsOptions,
   Page,
@@ -223,6 +227,31 @@ export type {
   CreateAccountFundingProviderOptions,
 } from "./features/createAccountFunding.js";
 export {
+  DEFAULT_ANCHOR_OUTLIER_Z_SCORE,
+  canonicalTransactionAssetId,
+  extractAnchorAnomalyFeatures,
+  anchorAnomalyFeaturesToFeatureMap,
+  createAnchorAnomalyFeatureProvider,
+} from "./features/anchorAnomaly.js";
+export type {
+  AnchorAnomalyFeatures,
+  AnchorAnomalyOptions,
+  AnchorAnomalyProviderOptions,
+} from "./features/anchorAnomaly.js";
+export {
+  SET_OPTIONS_TYPES,
+  AUTH_FLAGS,
+  CLAWBACK_ENABLED_FLAG,
+  extractMultisigAuthFeatures,
+  multisigAuthFeaturesToFeatureMap,
+  createMultisigAuthFeatureProvider,
+} from "./features/multisigAuth.js";
+export type {
+  MultisigAuthFeatures,
+  MultisigAuthOptions,
+  MultisigAuthProviderOptions,
+} from "./features/multisigAuth.js";
+export {
   FeatureRegistry,
   createFeatureRegistry,
   createDefaultFeatureRegistry,
@@ -314,6 +343,23 @@ export {
   createUnsolicitedClaimSpamRule,
 } from "./rules/unsolicitedClaimSpam.js";
 export type { UnsolicitedClaimSpamRuleOptions } from "./rules/unsolicitedClaimSpam.js";
+export {
+  DEFAULT_ANCHOR_ANOMALY_RULE_WEIGHT,
+  DEFAULT_ANCHOR_ANOMALY_MIN_SCORE,
+  DEFAULT_ANCHOR_ANOMALY_MIN_TRANSACTIONS,
+  DEFAULT_ANCHOR_ANOMALY_MISSING_MEMO_RATIO,
+  DEFAULT_ANCHOR_ANOMALY_MEMO_REUSE_THRESHOLD,
+  DEFAULT_ANCHOR_ANOMALY_CONCENTRATION_THRESHOLD,
+  DEFAULT_ANCHOR_ANOMALY_OUTLIER_THRESHOLD,
+  createAnchorAnomalyRule,
+} from "./rules/anchorAnomaly.js";
+export type { AnchorAnomalyRuleOptions } from "./rules/anchorAnomaly.js";
+export {
+  DEFAULT_MULTISIG_AUTHORIZATION_RULE_WEIGHT,
+  DEFAULT_MULTISIG_AUTHORIZATION_MIN_SCORE,
+  createMultisigAuthorizationRule,
+} from "./rules/multisigAuth.js";
+export type { MultisigAuthorizationRuleOptions } from "./rules/multisigAuth.js";
 export {
   DEFAULT_REUSED_MEMO_ID_RULE_WEIGHT,
   DEFAULT_REUSED_MEMO_ID_MIN_SCORE,
