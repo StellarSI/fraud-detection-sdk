@@ -225,10 +225,10 @@ export function extractMultisigAuthFeatures(
 
     // Flags: clawback enablement and authorization flag changes.
     const setFlags = Array.isArray(details.setFlags)
-      ? details.setFlags.filter((flag): flag is string => typeof flag === "string")
+      ? details.setFlags.filter((flag: unknown): flag is string => typeof flag === "string")
       : [];
     const clearFlags = Array.isArray(details.clearFlags)
-      ? details.clearFlags.filter((flag): flag is string => typeof flag === "string")
+      ? details.clearFlags.filter((flag: unknown): flag is string => typeof flag === "string")
       : [];
     const normalizedSet = new Set(setFlags.map(normalizeFlag));
     const normalizedClear = new Set(clearFlags.map(normalizeFlag));
