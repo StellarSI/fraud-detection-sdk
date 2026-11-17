@@ -2,8 +2,8 @@
  * Pluggable rules engine (issues #25, #38).
  *
  * Re-exports the engine contracts plus the starting-point example rules
- * and the detector rules added since, so consumers can import them from
- * one place.
+ * and the detector rules added since (including clawback activity and
+ * rapid fan-in/fan-out), so consumers can import them from one place.
  */
 
 export {
@@ -110,3 +110,24 @@ export {
   createReusedMemoIdRule,
 } from "./reusedMemoId.js";
 export type { ReusedMemoIdRuleOptions } from "./reusedMemoId.js";
+
+export {
+  DEFAULT_CLAWBACK_ACTIVITY_RULE_WEIGHT,
+  DEFAULT_CLAWBACK_ACTIVITY_MIN_SCORE,
+  DEFAULT_CLAWBACK_ACTIVITY_OPERATION_THRESHOLD,
+  DEFAULT_CLAWBACK_ACTIVITY_VOLUME_THRESHOLD,
+  DEFAULT_CLAWBACK_ACTIVITY_FREQUENCY_THRESHOLD,
+  DEFAULT_CLAWBACK_ACTIVITY_RULE_BURST_THRESHOLD,
+  createClawbackActivityRule,
+} from "./clawbackActivity.js";
+export type { ClawbackActivityRuleOptions } from "./clawbackActivity.js";
+
+export {
+  DEFAULT_FAN_IN_OUT_RULE_WEIGHT,
+  DEFAULT_FAN_IN_OUT_MIN_SCORE,
+  DEFAULT_FAN_IN_OUT_DEGREE_THRESHOLD,
+  DEFAULT_FAN_IN_OUT_BURST_THRESHOLD,
+  DEFAULT_FAN_IN_OUT_SPEED_THRESHOLD,
+  createFanInOutRule,
+} from "./fanInOut.js";
+export type { FanInOutRuleOptions } from "./fanInOut.js";
