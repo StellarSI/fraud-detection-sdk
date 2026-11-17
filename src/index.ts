@@ -252,6 +252,33 @@ export type {
   MultisigAuthProviderOptions,
 } from "./features/multisigAuth.js";
 export {
+  DEFAULT_CLAWBACK_ACTIVITY_WINDOW_MS,
+  DEFAULT_CLAWBACK_ACTIVITY_BURST_WINDOW_MS,
+  DEFAULT_CLAWBACK_ACTIVITY_BURST_THRESHOLD,
+  CLAWBACK_OPERATION_TYPES,
+  isClawbackOperation,
+  extractClawbackActivityFeatures,
+  clawbackActivityFeaturesToFeatureMap,
+  createClawbackActivityFeatureProvider,
+} from "./features/clawbackActivity.js";
+export type {
+  ClawbackActivityFeatures,
+  ClawbackActivityOptions,
+  ClawbackActivityProviderOptions,
+} from "./features/clawbackActivity.js";
+export {
+  DEFAULT_FAN_WINDOW_LEDGERS,
+  DEFAULT_FAN_BURST_LEDGERS,
+  extractFanInOutFeatures,
+  fanInOutFeaturesToFeatureMap,
+  createFanInOutFeatureProvider,
+} from "./features/fanInOut.js";
+export type {
+  FanInOutFeatures,
+  FanInOutOptions,
+  FanInOutProviderOptions,
+} from "./features/fanInOut.js";
+export {
   FeatureRegistry,
   createFeatureRegistry,
   createDefaultFeatureRegistry,
@@ -368,3 +395,22 @@ export {
   createReusedMemoIdRule,
 } from "./rules/reusedMemoId.js";
 export type { ReusedMemoIdRuleOptions } from "./rules/reusedMemoId.js";
+export {
+  DEFAULT_CLAWBACK_ACTIVITY_RULE_WEIGHT,
+  DEFAULT_CLAWBACK_ACTIVITY_MIN_SCORE,
+  DEFAULT_CLAWBACK_ACTIVITY_OPERATION_THRESHOLD,
+  DEFAULT_CLAWBACK_ACTIVITY_VOLUME_THRESHOLD,
+  DEFAULT_CLAWBACK_ACTIVITY_FREQUENCY_THRESHOLD,
+  DEFAULT_CLAWBACK_ACTIVITY_BURST_THRESHOLD,
+  createClawbackActivityRule,
+} from "./rules/clawbackActivity.js";
+export type { ClawbackActivityRuleOptions } from "./rules/clawbackActivity.js";
+export {
+  DEFAULT_FAN_IN_OUT_RULE_WEIGHT,
+  DEFAULT_FAN_IN_OUT_MIN_SCORE,
+  DEFAULT_FAN_IN_OUT_DEGREE_THRESHOLD,
+  DEFAULT_FAN_IN_OUT_BURST_THRESHOLD,
+  DEFAULT_FAN_IN_OUT_SPEED_THRESHOLD,
+  createFanInOutRule,
+} from "./rules/fanInOut.js";
+export type { FanInOutRuleOptions } from "./rules/fanInOut.js";

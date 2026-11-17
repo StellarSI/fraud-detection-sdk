@@ -1,10 +1,11 @@
 /**
- * Feature extraction families (issues #19, #20, #21, #22, #23, #31, #32, #34, #35).
+ * Feature extraction families (issues #19, #20, #21, #22, #23, #31, #32, #34, #35, #36, #37).
  *
  * Re-exports the shared provider contracts plus the velocity, graph,
- * asset, memo, lifecycle, claimable-balance, anchor-anomaly, and
- * multisig authorization-change implementations so the registry (#24)
- * and SDK consumers can import them from one place.
+ * asset, memo, lifecycle, claimable-balance, anchor-anomaly,
+ * multisig authorization-change, clawback-activity, and fan-in/fan-out
+ * implementations so the registry (#24) and SDK consumers can import them
+ * from one place.
  */
 
 export type {
@@ -188,6 +189,35 @@ export type {
   MultisigAuthOptions,
   MultisigAuthProviderOptions,
 } from "./multisigAuth.js";
+
+export {
+  DEFAULT_CLAWBACK_ACTIVITY_WINDOW_MS,
+  DEFAULT_CLAWBACK_ACTIVITY_BURST_WINDOW_MS,
+  DEFAULT_CLAWBACK_ACTIVITY_BURST_THRESHOLD,
+  CLAWBACK_OPERATION_TYPES,
+  isClawbackOperation,
+  extractClawbackActivityFeatures,
+  clawbackActivityFeaturesToFeatureMap,
+  createClawbackActivityFeatureProvider,
+} from "./clawbackActivity.js";
+export type {
+  ClawbackActivityFeatures,
+  ClawbackActivityOptions,
+  ClawbackActivityProviderOptions,
+} from "./clawbackActivity.js";
+
+export {
+  DEFAULT_FAN_WINDOW_LEDGERS,
+  DEFAULT_FAN_BURST_LEDGERS,
+  extractFanInOutFeatures,
+  fanInOutFeaturesToFeatureMap,
+  createFanInOutFeatureProvider,
+} from "./fanInOut.js";
+export type {
+  FanInOutFeatures,
+  FanInOutOptions,
+  FanInOutProviderOptions,
+} from "./fanInOut.js";
 
 export {
   FeatureRegistry,
