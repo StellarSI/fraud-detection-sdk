@@ -152,7 +152,10 @@ describe("extractClawbackActivityFeatures - operations, volume, burst", () => {
       tx({ id: "op-1", type: "clawback", assetCode: "XYZ", assetIssuer: OTHER }),
       tx({ id: "op-2", type: "clawback_claimable_balance" }),
     ];
-    const features = extractClawbackActivityFeatures(account, transactions, options);
+    const features = extractClawbackActivityFeatures(account, transactions, {
+      ...options,
+      burstThreshold: 2,
+    });
     expect(features.clawbackOperationCount).toBe(2);
     expect(features.clawbackBurstCount).toBe(2);
     expect(features.clawbackBurstDetected).toBe(true);
