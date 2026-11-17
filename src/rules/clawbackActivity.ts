@@ -34,8 +34,8 @@ export const DEFAULT_CLAWBACK_ACTIVITY_VOLUME_THRESHOLD = 1000;
 /** Default transaction count treated as unusual frequency. */
 export const DEFAULT_CLAWBACK_ACTIVITY_FREQUENCY_THRESHOLD = 3;
 
-/** Default burst count treated as unusual frequency. */
-export const DEFAULT_CLAWBACK_ACTIVITY_BURST_THRESHOLD = 3;
+/** Default burst count treated as unusual frequency by the rule. */
+export const DEFAULT_CLAWBACK_ACTIVITY_RULE_BURST_THRESHOLD = 3;
 
 export interface ClawbackActivityRuleOptions {
   /**
@@ -171,7 +171,7 @@ export function createClawbackActivityRule(
   );
   const burstThreshold = resolvePositiveInteger(
     options.burstThreshold,
-    DEFAULT_CLAWBACK_ACTIVITY_BURST_THRESHOLD,
+    DEFAULT_CLAWBACK_ACTIVITY_RULE_BURST_THRESHOLD,
     "burstThreshold"
   );
   const enableOperationAlerts = resolveBoolean(
