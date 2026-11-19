@@ -18,6 +18,13 @@ export {
 } from "./engine.js";
 export type { Rule, RuleContext, RuleEngineOptions } from "./engine.js";
 
+export {
+  RuleRegistry,
+  createRuleRegistry,
+  createDefaultRuleRegistry,
+} from "./registry.js";
+export type { RuleRegistryEntry, RuleRegistrySnapshot } from "./registry.js";
+
 export { createPathPaymentLayeringRule } from "./pathPaymentLayering.js";
 export type { PathPaymentLayeringRuleOptions } from "./pathPaymentLayering.js";
 
