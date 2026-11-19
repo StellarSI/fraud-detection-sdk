@@ -125,8 +125,16 @@ function stdDev(stats: BaselineStats): number {
 
 function zScore(stats: BaselineStats, value: number): number {
   const sd = stdDev(stats);
-  if (sd <= 0) return 0;
-  return Math.abs(value - stats.mean) / sd;
+  const delta = Math.abs(value - stats.mean);
+
+  if (sd <= 0) {
+    // Degenerate baseline: every observed value was identical. A different
+    // current value is an unambiguous (maximally unusual) deviation, while
+    // an unchanged value is perfectly normal. Avoid dividing by zero.
+    return delta === 0 ? 0 : Number.POSITIVE_INFINITY;
+  }
+
+  return delta / sd;
 }
 
 function num(context: RuleContext, key: string): number {
@@ -230,8 +238,20 @@ export class BaselineAccount {
    * enough history or nothing deviates.
    */
   evaluate(accountId: string, features: RuleContext): Signal | null {
-    const stats = this.stats.get(accountId);
-    if (!stats) return null;
+    let stats = this.stats.get(accountId);
+    if (!stats) {
+      // Hydrate from the store so baselines persisted by another instance
+      // can be evaluated without re-recording history.
+      const snapshot = this.store.get(accountId);
+      if (!snapshot) return null;
+      stats = {
+        velocity: snapshot.velocity,
+        counterpartyCount: snapshot.counterpartyCount,
+        assetDiversity: snapshot.assetDiversity,
+        trustlineCount: snapshot.trustlineCount,
+      };
+      this.stats.set(accountId, stats);
+    }
     if (stats.velocity.count < this.minObservations) return null;
 
     const velocityZ = zScore(stats.velocity, num(features, "velocityTotalCount"));
@@ -275,6 +295,12 @@ export class BaselineAccount {
   /** Returns the current baseline snapshot for ``accountId``, if any. */
   getBaseline(accountId: string): BaselineSnapshot | undefined {
     return this.store.get(accountId);
+  }
+
+  /** Removes the baseline for ``accountId`` from both memory and the store. */
+  delete(accountId: string): void {
+    this.stats.delete(accountId);
+    this.store.delete(accountId);
   }
 
   private topMetric(

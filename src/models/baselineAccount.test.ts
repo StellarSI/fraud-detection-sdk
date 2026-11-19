@@ -10,6 +10,7 @@
 import { describe, expect, it } from "vitest";
 import { RuleEngine, createRuleEngine, type RuleContext } from "../rules/engine.js";
 import {
+  DEFAULT_BASELINE_RULE_WEIGHT,
   DEFAULT_BASELINE_DEVIATION_THRESHOLD,
   DEFAULT_BASELINE_MIN_OBSERVATIONS,
   BaselineAccount,
@@ -90,11 +91,12 @@ describe("BaselineAccount - normal behavior", () => {
 
   it("scales weight with deviation severity", () => {
     const baseline = new BaselineAccount({ minObservations: 2, deviationThreshold: 1 });
+    // varied history gives the baseline a non-zero standard deviation
     baseline.record(ACCOUNT, ruleContext({ velocityTotalCount: 10 }));
-    baseline.record(ACCOUNT, ruleContext({ velocityTotalCount: 10 }));
+    baseline.record(ACCOUNT, ruleContext({ velocityTotalCount: 12 }));
 
-    const mild = baseline.evaluate(ACCOUNT, ruleContext({ velocityTotalCount: 14 }));
-    const severe = baseline.evaluate(ACCOUNT, ruleContext({ velocityTotalCount: 40 }));
+    const mild = baseline.evaluate(ACCOUNT, ruleContext({ velocityTotalCount: 13 }));
+    const severe = baseline.evaluate(ACCOUNT, ruleContext({ velocityTotalCount: 15 }));
 
     expect(mild).not.toBeNull();
     expect(severe).not.toBeNull();
@@ -102,22 +104,25 @@ describe("BaselineAccount - normal behavior", () => {
   });
 
   it("honors a custom deviation threshold", () => {
-    const baseline = new BaselineAccount({
+    const strict = new BaselineAccount({
       minObservations: 2,
       deviationThreshold: 5,
     });
-    baseline.record(ACCOUNT, stableBaselineFeatures());
-    baseline.record(ACCOUNT, stableBaselineFeatures());
+    strict.record(ACCOUNT, ruleContext({ velocityTotalCount: 10 }));
+    strict.record(ACCOUNT, ruleContext({ velocityTotalCount: 12 }));
 
-    expect(baseline.evaluate(ACCOUNT, deviantFeatures())).toBeNull();
+    // z-score ~1.41 for velocity=13, below the strict threshold of 5
+    expect(strict.evaluate(ACCOUNT, ruleContext({ velocityTotalCount: 13 }))).toBeNull();
 
     const loose = new BaselineAccount({
       minObservations: 2,
       deviationThreshold: 0.5,
     });
-    loose.record(ACCOUNT, stableBaselineFeatures());
-    loose.record(ACCOUNT, stableBaselineFeatures());
-    expect(loose.evaluate(ACCOUNT, deviantFeatures())).not.toBeNull();
+    loose.record(ACCOUNT, ruleContext({ velocityTotalCount: 10 }));
+    loose.record(ACCOUNT, ruleContext({ velocityTotalCount: 12 }));
+    expect(
+      loose.evaluate(ACCOUNT, ruleContext({ velocityTotalCount: 13 }))
+    ).not.toBeNull();
   });
 
   it("persists snapshots through the store", () => {

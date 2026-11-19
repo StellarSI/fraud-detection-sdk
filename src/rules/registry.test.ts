@@ -236,7 +236,7 @@ describe("createDefaultRuleRegistry", () => {
 
     expect(ids).toContain("path-payment-layering");
     expect(ids).toContain("trustline-abuse");
-    expect(ids).toContain("throwaway-merge");
+    expect(ids).toContain("throwaway-account");
     expect(ids).toContain("dusting");
     expect(ids).toContain("create-account-funding");
     expect(ids).toContain("claimable-balance-abuse");
