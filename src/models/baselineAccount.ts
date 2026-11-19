@@ -352,9 +352,7 @@ export function createBaselineRule(options: BaselineRuleOptions = {}): Rule & {
       ? DEFAULT_BASELINE_RULE_WEIGHT
       : options.weight;
 
-  const rule: Rule & {
-    record: (accountId: string, features: RuleContext) => void;
-  } = {
+  const rule = {
     id: "baseline-deviation",
     weight,
     evaluate(context: RuleContext): Signal | null {
@@ -365,8 +363,8 @@ export function createBaselineRule(options: BaselineRuleOptions = {}): Rule & {
       if (!accountId) return null;
       return baseline.evaluate(accountId, context);
     },
+    record: baseline.record.bind(baseline),
   };
-  rule.record = baseline.record.bind(baseline);
   return rule;
 }
 
