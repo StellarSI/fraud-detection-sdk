@@ -420,3 +420,18 @@ export {
   createFanInOutRule,
 } from "./rules/fanInOut.js";
 export type { FanInOutRuleOptions } from "./rules/fanInOut.js";
+export {
+  DEFAULT_BASELINE_RULE_WEIGHT,
+  DEFAULT_BASELINE_MIN_OBSERVATIONS,
+  DEFAULT_BASELINE_DEVIATION_THRESHOLD,
+  DEFAULT_BASELINE_MAX_AGE_MS,
+  BaselineAccount,
+  InMemoryBaselineStore,
+  createBaselineRule,
+} from "./models/baselineAccount.js";
+export type {
+  BaselineSnapshot,
+  BaselineStore,
+  BaselineAccountOptions,
+  BaselineRuleOptions,
+} from "./models/baselineAccount.js";
