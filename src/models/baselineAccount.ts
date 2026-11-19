@@ -105,8 +105,6 @@ export interface BaselineAccountOptions {
   readonly maxAgeMs?: number;
 }
 
-const EMPTY_STATS: BaselineStats = { count: 0, mean: 0, m2: 0 };
-
 function emptyStats(): BaselineStats {
   return { count: 0, mean: 0, m2: 0 };
 }

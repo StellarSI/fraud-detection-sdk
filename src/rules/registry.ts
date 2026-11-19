@@ -28,7 +28,6 @@ import {
   createRuleEngine,
   type Rule,
   type RuleContext,
-  type RuleEngineOptions,
 } from "./engine.js";
 import type { Signal } from "../types.js";
 import { createPathPaymentLayeringRule } from "./pathPaymentLayering.js";
