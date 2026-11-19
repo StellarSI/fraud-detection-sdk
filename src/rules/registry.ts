@@ -30,7 +30,6 @@ import {
   type RuleContext,
   type RuleEngineOptions,
 } from "./engine.js";
-import { ValidationError } from "../errors.js";
 import type { Signal } from "../types.js";
 import { createPathPaymentLayeringRule } from "./pathPaymentLayering.js";
 import { createTrustlineAbuseRule } from "./trustlineAbuse.js";
