@@ -63,6 +63,12 @@ console.log(result.level);    // "high"
 console.log(result.signals);  // [{ id: "rapid-fan-out", weight: 0.41 }, ...]
 ```
 
+### Examples Directory
+
+For runnable, end-to-end demonstrations verifying the SDK against the Stellar network, see [examples/](./examples):
+- [examples/basic-scoring.ts](./examples/basic-scoring.ts): Account risk evaluation and anomaly reporting.
+- [examples/streaming-watcher.ts](./examples/streaming-watcher.ts): Real-time streaming asset monitoring.
+
 ### Streaming
 
 ```ts
