@@ -6,9 +6,9 @@
  */
 
 export interface BaselineStore<T = unknown> {
-  get(key: string): T | undefined | Promise<T | undefined>;
-  put(key: string, value: T): void | Promise<void>;
-  delete(key: string): void | Promise<void>;
+  get(key: string): T | undefined;
+  put(key: string, value: T): void;
+  delete(key: string): void;
 }
 
 /**
