@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Per-account behavioral baseline (issue #39).
  *
  * Baselines turn raw features into "normal for this account" references
@@ -26,6 +26,7 @@
  */
 
 import type { Signal } from "../types.js";
+import { InMemoryBaselineStore as StorageInMemoryBaselineStore, type BaselineStore as StorageBaselineStore } from "../storage/index.js";
 import type { Rule, RuleContext } from "../rules/engine.js";
 
 /** Running statistics for one baseline metric (Welford's online algorithm). */
@@ -52,37 +53,10 @@ export interface BaselineSnapshot {
 }
 
 /** Persistence abstraction for baseline snapshots (issue #42). */
-export interface BaselineStore {
-  /** Reads the baseline snapshot for an account, if any. */
-  get(accountId: string): BaselineSnapshot | undefined;
-  /** Persists a baseline snapshot for an account. */
-  set(accountId: string, snapshot: BaselineSnapshot): void;
-  /** Removes the baseline snapshot for an account. */
-  delete(accountId: string): void;
-}
+export type BaselineStore = StorageBaselineStore<BaselineSnapshot>;
 
-/**
- * In-memory baseline store (default implementation of #42).
- *
- * Kept in memory so the rule composes synchronously through the rules
- * engine; swap in a durable store once the persistence abstraction is
- * fleshed out by issue #42.
- */
-export class InMemoryBaselineStore implements BaselineStore {
-  private readonly store = new Map<string, BaselineSnapshot>();
-
-  get(accountId: string): BaselineSnapshot | undefined {
-    return this.store.get(accountId);
-  }
-
-  set(accountId: string, snapshot: BaselineSnapshot): void {
-    this.store.set(accountId, snapshot);
-  }
-
-  delete(accountId: string): void {
-    this.store.delete(accountId);
-  }
-}
+/** In-memory baseline store (default implementation of #42). */
+export class InMemoryBaselineStore extends StorageInMemoryBaselineStore<BaselineSnapshot> {}
 
 /** Options for {@link BaselineAccount}. */
 export interface BaselineAccountOptions {
@@ -227,7 +201,7 @@ export class BaselineAccount {
     );
 
     this.stats.set(accountId, stats);
-    this.store.set(accountId, this.snapshot(accountId, stats));
+    this.store.put(accountId, this.snapshot(accountId, stats));
   }
 
   /**
@@ -393,3 +367,4 @@ export function createBaselineRule(options: BaselineRuleOptions = {}): Rule & {
 }
 
 export default createBaselineRule;
+
