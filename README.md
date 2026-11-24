@@ -136,6 +136,17 @@ The SDK consists of these core modules:
 
 See [docs/architecture.md](docs/architecture.md) for the full architectural overview.
 
+### Model plugins
+
+Rules, statistical models and ML models share one async plugin contract
+(`ModelPlugin` in `src/models/types.ts`). Every plugin exposes a stable `id`,
+`async score(context): Promise<Signal[]>` and `configure(options)`, so tiers
+can be swapped or combined without rewriting the scoring pipeline. Use
+`createRulesModelPlugin`, `createStatisticalModelPlugin`, `createMLModelPlugin`
+and `createModelPluginRegistry` to compose them; see the
+[plugin contract](docs/architecture.md#custom-detectors-and-the-model-plugin-contract)
+for the full example.
+
 ### Feature extraction
 
 Feature families expose pure, registry-ready providers (`src/features/types.ts`):

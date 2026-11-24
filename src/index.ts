@@ -435,3 +435,32 @@ export type {
   BaselineAccountOptions,
   BaselineRuleOptions,
 } from "./models/baselineAccount.js";
+
+// Unified, async model plugin contract (issue #43).
+export { isModelPlugin } from "./models/types.js";
+export type {
+  ModelContext,
+  ModelPlugin,
+  ModelPluginOptions,
+} from "./models/types.js";
+export {
+  createRulesModelPlugin,
+  createStatisticalModelPlugin,
+  createMLModelPlugin,
+  createModelPluginRegistry,
+  ModelPluginRegistry,
+} from "./models/plugins.js";
+export type {
+  RulesModelPluginOptions,
+  StatisticalModelPluginOptions,
+  MLModelPluginOptions,
+  MLPredict,
+} from "./models/plugins.js";
+export {
+  StatisticalAnomalyDetector,
+  createStatisticalAnomalyDetector,
+} from "./models/statistical.js";
+export type {
+  StatisticalDetectorOptions,
+  StatisticalDetectionResult,
+} from "./models/statistical.js";
