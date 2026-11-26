@@ -229,7 +229,7 @@ describe("RuleRegistry - snapshot", () => {
 });
 
 describe("createDefaultRuleRegistry", () => {
-  it("registers every detector rule (#26-#37)", () => {
+  it("registers every detector rule (#26-#37, #44)", () => {
     const registry: RuleRegistry = createDefaultRuleRegistry();
 
     const ids = registry.ruleIds();
@@ -246,7 +246,8 @@ describe("createDefaultRuleRegistry", () => {
     expect(ids).toContain("multisig-authorization");
     expect(ids).toContain("clawback-activity");
     expect(ids).toContain("fan-in-out");
-    expect(ids).toHaveLength(12);
+    expect(ids).toContain("counterparty-cluster");
+    expect(ids).toHaveLength(13);
   });
 
   it("composes a real detector through the engine", () => {

@@ -82,7 +82,7 @@ function makeContext(overrides: Partial<FeatureContext> = {}): FeatureContext {
 }
 
 describe("FeatureRegistry", () => {
-  it("registers all five feature families and runs them through the pipeline", () => {
+  it("registers all six feature families and runs them through the pipeline", () => {
     const registry = createDefaultFeatureRegistry();
 
     expect(registry.providerNames()).toEqual([
@@ -91,6 +91,7 @@ describe("FeatureRegistry", () => {
       "assets",
       "memo",
       "lifecycle",
+      "counterparty-clustering",
     ]);
 
     const map = registry.compute(makeContext());
@@ -153,11 +154,11 @@ describe("FeatureRegistry", () => {
 
   it("toggles providers at runtime with setEnabled", () => {
     const registry = createDefaultFeatureRegistry();
-    expect(registry.enabledProviders()).toHaveLength(5);
+    expect(registry.enabledProviders()).toHaveLength(6);
 
     registry.setEnabled("memo", false);
     expect(registry.isEnabled("memo")).toBe(false);
-    expect(registry.enabledProviders()).toHaveLength(4);
+    expect(registry.enabledProviders()).toHaveLength(5);
 
     const map = registry.compute(makeContext());
     expect(map["memoTotalCount"]).toBeUndefined();
@@ -207,12 +208,13 @@ describe("FeatureRegistry", () => {
   it("exposes list, get, and has helpers", () => {
     const registry = createDefaultFeatureRegistry();
 
-    expect(registry.list()).toHaveLength(5);
+    expect(registry.list()).toHaveLength(6);
     expect(registry.has("velocity")).toBe(true);
+    expect(registry.has("counterparty-clustering")).toBe(true);
     expect(registry.has("nope")).toBe(false);
     expect(registry.get("velocity")?.name).toBe("velocity");
     expect(registry.get("nope")).toBeUndefined();
-    expect(createDefaultFeatureProviders()).toHaveLength(5);
+    expect(createDefaultFeatureProviders()).toHaveLength(6);
   });
 });
 

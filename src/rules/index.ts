@@ -138,3 +138,12 @@ export {
   createFanInOutRule,
 } from "./fanInOut.js";
 export type { FanInOutRuleOptions } from "./fanInOut.js";
+
+export {
+  DEFAULT_COUNTERPARTY_CLUSTER_RULE_WEIGHT,
+  DEFAULT_COUNTERPARTY_CLUSTER_MIN_SCORE,
+  DEFAULT_COUNTERPARTY_CLUSTER_MIN_SIZE,
+  DEFAULT_COUNTERPARTY_CLUSTER_MIN_DENSITY,
+  createCounterpartyClusterRule,
+} from "./counterpartyCluster.js";
+export type { CounterpartyClusterRuleOptions } from "./counterpartyCluster.js";

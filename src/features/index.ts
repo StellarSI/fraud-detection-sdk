@@ -44,6 +44,25 @@ export type {
 } from "./graph.js";
 
 export {
+  ConnectedComponentsClustering,
+  LabelPropagationClustering,
+  DEFAULT_MAX_LABEL_ITERATIONS,
+  DEFAULT_MIN_CLUSTER_DENSITY,
+  DEFAULT_MIN_CLUSTER_SIZE,
+  clusterForAccount,
+  clusteringFeaturesToFeatureMap,
+  computeClusters,
+  createClusteringFeatureProvider,
+  extractClusteringFeatures,
+} from "../graph/clustering.js";
+export type {
+  ClusteringAlgorithm,
+  ClusteringFeatures,
+  ClusteringOptions,
+  CounterpartyCluster,
+} from "../graph/clustering.js";
+
+export {
   DEFAULT_TRUSTLINE_CHURN_WINDOW_MS,
   NATIVE_ASSET_ID,
   canonicalAssetId,

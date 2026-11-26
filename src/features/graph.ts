@@ -101,6 +101,11 @@ export class CounterpartyGraph {
     return this.outAdjacency.has(accountId);
   }
 
+  /** Sorted account IDs currently retained in the graph. */
+  nodes(): string[] {
+    return Array.from(this.outAdjacency.keys()).sort();
+  }
+
   private ensureNode(accountId: string): boolean {
     if (this.outAdjacency.has(accountId)) {
       return true;
