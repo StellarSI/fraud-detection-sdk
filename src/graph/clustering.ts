@@ -129,8 +129,11 @@ export class ConnectedComponentsClustering implements ClusteringAlgorithm {
  *
  * Each account starts with its own label and repeatedly adopts the most
  * common label among its counterparties (lexicographic tie-break). Labels
- * are updated in a batch per iteration so the result is independent of
- * node insertion order. Iteration stops early once no label changes.
+ * are updated in place in sorted node order: the earlier nodes in a sweep
+ * are visible to later ones, which converges instead of oscillating on a
+ * 2-node component (synchronous updates swap two labels forever there).
+ * Iteration stops early once no label changes, and sorted traversal keeps
+ * the result independent of node insertion order.
  */
 export class LabelPropagationClustering implements ClusteringAlgorithm {
   readonly name = "label-propagation";
@@ -151,7 +154,7 @@ export class LabelPropagationClustering implements ClusteringAlgorithm {
     }
 
     for (let iteration = 0; iteration < this.maxIterations; iteration += 1) {
-      const countsByNode = new Map<string, Map<string, number>>();
+      let changed = false;
       for (const node of nodes) {
         const counts = new Map<string, number>();
         for (const neighbor of graph.neighbors(node)) {
@@ -160,33 +163,19 @@ export class LabelPropagationClustering implements ClusteringAlgorithm {
             counts.set(label, (counts.get(label) ?? 0) + 1);
           }
         }
-        countsByNode.set(node, counts);
-      }
 
-      const next = new Map<string, string>();
-      let changed = false;
-      for (const node of nodes) {
-        const counts = countsByNode.get(node);
         let winner: string | undefined;
         let winnerCount = -1;
-        if (counts !== undefined) {
-          for (const [label, count] of counts) {
-            if (count > winnerCount || (count === winnerCount && label < (winner ?? ""))) {
-              winner = label;
-              winnerCount = count;
-            }
+        for (const [label, count] of counts) {
+          if (count > winnerCount || (count === winnerCount && label < (winner ?? ""))) {
+            winner = label;
+            winnerCount = count;
           }
         }
-        const current = labels.get(node);
-        next.set(node, winner !== undefined ? winner : (current ?? node));
-        if (next.get(node) !== current) {
+        if (winner !== undefined && winner !== labels.get(node)) {
+          labels.set(node, winner);
           changed = true;
         }
-      }
-
-      labels.clear();
-      for (const [node, label] of next) {
-        labels.set(node, label);
       }
       if (!changed) {
         break;
