@@ -42,8 +42,9 @@ import { createAnchorAnomalyRule } from "./anchorAnomaly.js";
 import { createMultisigAuthorizationRule } from "./multisigAuth.js";
 import { createClawbackActivityRule } from "./clawbackActivity.js";
 import { createFanInOutRule } from "./fanInOut.js";
+import { createCounterpartyClusterRule } from "./counterpartyCluster.js";
 
-/** Every detector rule (#26-#37), registered by default. */
+/** Every detector rule (#26-#37, #44), registered by default. */
 const DETECTOR_RULES: readonly Rule[] = [
   createPathPaymentLayeringRule(),
   createTrustlineAbuseRule(),
@@ -57,6 +58,7 @@ const DETECTOR_RULES: readonly Rule[] = [
   createMultisigAuthorizationRule(),
   createClawbackActivityRule(),
   createFanInOutRule(),
+  createCounterpartyClusterRule(),
 ];
 
 /** Options for {@link RuleRegistry}. */
@@ -232,7 +234,7 @@ export function createRuleRegistry(options: RuleRegistryOptions = {}): RuleRegis
 }
 
 /**
- * Creates a registry pre-loaded with every detector rule (#26-#37) and
+ * Creates a registry pre-loaded with every detector rule (#26-#37, #44) and
  * optional per-rule toggles from `enabled`.
  */
 export function createDefaultRuleRegistry(

@@ -279,6 +279,24 @@ export type {
   FanInOutProviderOptions,
 } from "./features/fanInOut.js";
 export {
+  ConnectedComponentsClustering,
+  LabelPropagationClustering,
+  DEFAULT_MAX_LABEL_ITERATIONS,
+  DEFAULT_MIN_CLUSTER_DENSITY,
+  DEFAULT_MIN_CLUSTER_SIZE,
+  clusterForAccount,
+  clusteringFeaturesToFeatureMap,
+  computeClusters,
+  createClusteringFeatureProvider,
+  extractClusteringFeatures,
+} from "./graph/clustering.js";
+export type {
+  ClusteringAlgorithm,
+  ClusteringFeatures,
+  ClusteringOptions,
+  CounterpartyCluster,
+} from "./graph/clustering.js";
+export {
   FeatureRegistry,
   createFeatureRegistry,
   createDefaultFeatureRegistry,
@@ -420,6 +438,14 @@ export {
   createFanInOutRule,
 } from "./rules/fanInOut.js";
 export type { FanInOutRuleOptions } from "./rules/fanInOut.js";
+export {
+  DEFAULT_COUNTERPARTY_CLUSTER_RULE_WEIGHT,
+  DEFAULT_COUNTERPARTY_CLUSTER_MIN_SCORE,
+  DEFAULT_COUNTERPARTY_CLUSTER_MIN_SIZE,
+  DEFAULT_COUNTERPARTY_CLUSTER_MIN_DENSITY,
+  createCounterpartyClusterRule,
+} from "./rules/counterpartyCluster.js";
+export type { CounterpartyClusterRuleOptions } from "./rules/counterpartyCluster.js";
 export {
   DEFAULT_BASELINE_RULE_WEIGHT,
   DEFAULT_BASELINE_MIN_OBSERVATIONS,

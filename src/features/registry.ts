@@ -3,7 +3,8 @@
  *
  * This is the uniform pipeline the architecture diagram shows feeding the
  * rules, statistical, and ML tiers (README.md:84-98): every feature family
- * (velocity #19, graph #20, assets #21, memo #22, lifecycle #23) is a
+ * (velocity #19, graph #20, assets #21, memo #22, lifecycle #23,
+ * counterparty clustering #44) is a
  * {@link FeatureProvider} and a {@link FeatureRegistry} runs them against
  * one shared {@link FeatureContext}, merging their flat {@link FeatureMap}
  * output for downstream detectors and models.
@@ -28,6 +29,7 @@ import { ValidationError } from "../errors.js";
 import type { FeatureContext, FeatureMap, FeatureProvider } from "./types.js";
 import { createVelocityFeatureProvider } from "./velocity.js";
 import { createGraphFeatureProvider } from "./graph.js";
+import { createClusteringFeatureProvider } from "../graph/clustering.js";
 import { createAssetFeatureProvider } from "./assets.js";
 import { createMemoFeatureProvider } from "./memo.js";
 import { createLifecycleFeatureProvider } from "./lifecycle.js";
@@ -35,8 +37,8 @@ import { createLifecycleFeatureProvider } from "./lifecycle.js";
 /** Options for {@link FeatureRegistry}. */
 export interface FeatureRegistryOptions {
   /**
-   * Providers to register, in merge order. Defaults to the five built-in
-   * feature families (velocity, graph, assets, memo, lifecycle).
+   * Providers to register, in merge order. Defaults to the six built-in
+   * feature families (velocity, graph, assets, memo, lifecycle, clustering).
    */
   readonly providers?: readonly FeatureProvider[];
   /**
@@ -249,7 +251,7 @@ export class FeatureRegistry {
   }
 }
 
-/** Creates the five built-in feature providers (#19-#23). */
+/** Creates the six built-in feature providers (#19-#23, #44). */
 export function createDefaultFeatureProviders(): FeatureProvider[] {
   return [
     createVelocityFeatureProvider(),
@@ -257,6 +259,7 @@ export function createDefaultFeatureProviders(): FeatureProvider[] {
     createAssetFeatureProvider(),
     createMemoFeatureProvider(),
     createLifecycleFeatureProvider(),
+    createClusteringFeatureProvider(),
   ];
 }
 
@@ -268,7 +271,7 @@ export function createFeatureRegistry(
 }
 
 /**
- * Creates a registry pre-loaded with the five default families (#19-#23)
+ * Creates a registry pre-loaded with the six default families (#19-#23, #44)
  * and optional per-provider toggles from `enabled`.
  */
 export function createDefaultFeatureRegistry(

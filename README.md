@@ -23,6 +23,7 @@ Generic fraud models miss patterns that are unique to the Stellar network. `frau
 - **Memo patterns**: reused memo IDs and anchor deposit/withdrawal anomalies
 - **Multi-signature and clawback-enabled assets** with unusual authorization activity
 - **Rapid fan-in / fan-out** across many accounts within a few ledgers
+- **Counterparty clustering**: tightly connected groups of accounts that may represent a coordinated fraud ring
 
 The SDK scores Stellar accounts and transactions on a 0–1 risk scale, returning explainable signals so human reviewers can act on them—not replace them.
 
@@ -100,7 +101,7 @@ Horizon / transaction-analytics-api
               │
               ▼
       Feature extraction
-   (velocity, graph, asset, memo, lifecycle)
+   (velocity, graph, clustering, asset, memo, lifecycle)
               │
      ┌────────┼────────┐
      ▼        ▼        ▼
