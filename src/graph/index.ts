@@ -18,3 +18,21 @@ export type {
   ClusteringOptions,
   CounterpartyCluster,
 } from "./clustering.js";
+
+export {
+  DEFAULT_MAX_TRACE_DEPTH,
+  DEFAULT_MAX_TRACE_NODES,
+  DEFAULT_MAX_TRACE_PATHS,
+  buildFundFlowGraph,
+  traceFundFlow,
+  traceFundFlowFromTransactions,
+} from "./fundFlow.js";
+export type {
+  FundFlowDirection,
+  FundFlowEdge,
+  FundFlowGraph,
+  FundFlowHop,
+  FundFlowOptions,
+  FundFlowPath,
+  FundFlowTrace,
+} from "./fundFlow.js";

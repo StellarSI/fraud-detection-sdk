@@ -125,6 +125,7 @@ The SDK consists of these core modules:
 | `clients/errorMapping` | Shared HTTP status → SDK error mapping |
 | `features/velocity` | Velocity features over configurable time windows |
 | `features/graph` | Bounded counterparty graph, degree, clustering, reachability |
+| `graph/fundFlow` | Bounded fund-flow tracing with depth and amount filters |
 | `features/asset` | Balance/trustline features and trustline churn |
 | `features/memo` | Memo hygiene: sanitization, type validation, reuse counts |
 | `features/lifecycle` | Account age, `create_account` funding, rapid-merge flags |
