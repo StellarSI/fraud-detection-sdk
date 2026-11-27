@@ -238,9 +238,6 @@ export class Graph {
    * bounds (the traversal caps are reported through the returned length).
    */
   traverse(id: string, options: GraphTraversalOptions = {}): GraphVisit[] {
-    if (!this.hasNode(id)) {
-      return [];
-    }
     const view = options.view ?? "directed-out";
     const maxDepth = options.maxDepth === undefined ? Number.POSITIVE_INFINITY : options.maxDepth;
     if (
@@ -257,6 +254,9 @@ export class Graph {
       throw new ValidationError("maxNodes must be a non-negative integer");
     }
     if (maxNodes === 0) {
+      return [];
+    }
+    if (!this.hasNode(id)) {
       return [];
     }
 
