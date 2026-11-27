@@ -279,6 +279,20 @@ export type {
   FanInOutProviderOptions,
 } from "./features/fanInOut.js";
 export {
+  DEFAULT_GRAPH_MAX_EDGES,
+  DEFAULT_GRAPH_MAX_NODES,
+  Graph,
+} from "./graph/graph.js";
+export type {
+  GraphEdge,
+  GraphMetadataValue,
+  GraphNode,
+  GraphOptions,
+  GraphTraversalOptions,
+  GraphView,
+  GraphVisit,
+} from "./graph/types.js";
+export {
   ConnectedComponentsClustering,
   LabelPropagationClustering,
   DEFAULT_MAX_LABEL_ITERATIONS,
